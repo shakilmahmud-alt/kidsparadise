@@ -107,82 +107,66 @@ interface InlineImageZoomProps {
 }
 
 export const InlineImageZoom: React.FC<InlineImageZoomProps> = ({ imageUrl, altText, className = '', onOpenModal }) => {
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    const { left, top, width, height } = containerRef.current.getBoundingClientRect();
+    const x = ((e.clientX - left) / width) * 100;
+    const y = ((e.clientY - top) / height) * 100;
+    setMousePos({ x, y });
+  };
+
   return (
-    <TransformWrapper
-      initialScale={1}
-      minScale={1}
-      maxScale={4}
-      centerOnInit={true}
-      wheel={{ step: 0.12 }}
-      pinch={{ step: 5 }}
-      doubleClick={{ mode: 'toggle', step: 2 }}
-      panning={{ disabled: false }}
+    <div 
+      ref={containerRef}
+      className={`relative w-full h-full overflow-hidden bg-white cursor-crosshair group ${className}`}
+      onMouseEnter={() => setIsZoomed(true)}
+      onMouseLeave={() => setIsZoomed(false)}
+      onMouseMove={handleMouseMove}
+      onClick={onOpenModal}
     >
-      {({ zoomIn, zoomOut, resetTransform, state }) => (
-        <div className={`relative w-full h-full ${className}`}>
-          {/* Zoom level indicator */}
-          {state.scale > 1.05 && (
-            <div className="absolute top-3 left-3 z-10 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full pointer-events-none">
-              {Math.round(state.scale * 100)}%
-            </div>
-          )}
+      {/* Normal Image */}
+      <img
+        src={imageUrl}
+        alt={altText}
+        className={`product-gallery-main-image absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${isZoomed ? 'opacity-0' : 'opacity-100'}`}
+        draggable={false}
+      />
 
-          {/* Reset button when zoomed */}
-          {state.scale > 1.05 && (
-            <button
-              onClick={() => resetTransform()}
-              className="absolute top-3 right-3 z-10 w-8 h-8 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/80 transition-all"
-              title="Reset zoom"
-            >
-              <RotateCcw size={14} />
-            </button>
-          )}
+      {/* Zoomed Image */}
+      <img
+        src={imageUrl}
+        alt={altText}
+        className={`absolute inset-0 w-full h-full object-contain pointer-events-none transition-transform duration-75 ease-out ${isZoomed ? 'scale-[2.5] opacity-100' : 'scale-100 opacity-0'}`}
+        style={{
+          transformOrigin: `${mousePos.x}% ${mousePos.y}%`,
+        }}
+        draggable={false}
+      />
 
-          {/* Expand to fullscreen button */}
-          {onOpenModal && state.scale <= 1.05 && (
-            <button
-              onClick={onOpenModal}
-              className="absolute bottom-3 right-3 z-10 w-9 h-9 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100"
-              title="Open fullscreen"
-            >
-              <ZoomIn size={16} />
-            </button>
-          )}
+      {/* Expand to fullscreen button */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          if (onOpenModal) onOpenModal();
+        }}
+        className={`absolute bottom-3 right-3 z-10 w-9 h-9 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-all ${isZoomed ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'}`}
+        title="Open fullscreen"
+      >
+        <ZoomIn size={16} />
+      </button>
 
-          <TransformComponent
-            wrapperStyle={{
-              width: '100%',
-              height: '100%',
-            }}
-            contentStyle={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: state.scale > 1 ? 'grab' : 'zoom-in',
-            }}
-          >
-            <img
-              src={imageUrl}
-              alt={altText}
-              className="product-gallery-main-image max-h-full max-w-full object-contain transition-all duration-500 select-none"
-              draggable={false}
-            />
-          </TransformComponent>
-
-          {/* Zoom hint on first view */}
-          {state.scale <= 1.05 && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-              <div className="bg-black/40 backdrop-blur-sm text-white text-[10px] font-medium px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                <span className="hidden md:inline">Scroll to zoom • Double-click to expand</span>
-                <span className="md:hidden">Pinch to zoom • Double-tap to expand</span>
-              </div>
-            </div>
-          )}
+      {/* Zoom hint on first view */}
+      <div className={`absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none transition-opacity ${isZoomed ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'}`}>
+        <div className="bg-black/40 backdrop-blur-sm text-white text-[10px] font-medium px-3 py-1.5 rounded-full whitespace-nowrap">
+          <span className="hidden md:inline">Hover to zoom • Click to expand</span>
+          <span className="md:hidden">Tap to expand</span>
         </div>
-      )}
-    </TransformWrapper>
+      </div>
+    </div>
   );
 };
 
