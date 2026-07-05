@@ -2750,7 +2750,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                       {isUploadingImage ? (
                         <>
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#e92c5d] mb-2"></div>
-                          <p className="text-[#e92c5d] font-black text-lg">Uploading to ImageKit...</p>
+                          <p className="text-[#e92c5d] font-black text-lg">Uploading...</p>
                         </>
                       ) : (
                         <>
