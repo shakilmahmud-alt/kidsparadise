@@ -2706,15 +2706,16 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                         
                         setIsUploadingImage(true);
                         try {
-                          const authRes = await fetch('/api/imagekit-auth');
-                          if (!authRes.ok) {
-                            const errData = await authRes.json().catch(() => ({}));
-                            throw new Error(errData.details || errData.error || 'Failed to authenticate with ImageKit');
-                          }
-                          const authData = await authRes.json();
-                          
                           const newUrls: string[] = [];
                           for (const file of files) {
+                            const authRes = await fetch('/api/imagekit-auth');
+                            if (!authRes.ok) {
+                              const errData = await authRes.json().catch(() => ({}));
+                              console.error('Failed to authenticate for file', file.name, errData);
+                              continue; // Skip this file and try the next one
+                            }
+                            const authData = await authRes.json();
+                            
                             const formData = new FormData();
                             formData.append('file', file);
                             formData.append('publicKey', authData.publicKey || import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY as string);
@@ -2734,7 +2735,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                               newUrls.push(data.url);
                             } else {
                               const errData = await uploadRes.json().catch(() => ({}));
-                              console.error('ImageKit direct upload failed:', errData);
+                              console.error('ImageKit direct upload failed for', file.name, ':', errData);
                             }
                           }
                           
