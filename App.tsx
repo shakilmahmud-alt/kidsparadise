@@ -22,7 +22,7 @@ const BlogPost = React.lazy(() => import('./pages/BlogPost'));
 
 const DynamicPage = React.lazy(() => import('./pages/DynamicPage'));
 const CategoryPage = React.lazy(() => import('./pages/CategoryPage'));
-import LoadingScreen from './components/LoadingScreen';
+import PageSkeleton from './components/PageSkeleton';
 import { StoreProvider, useStore } from './context/StoreContext';
 
 const AppContent: React.FC = () => {
@@ -63,15 +63,17 @@ const AppContent: React.FC = () => {
 
   return (
     <>
-      {loading && pathname === '/' && <LoadingScreen />}
       <div className="min-h-screen flex flex-col font-sans">
         <CustomCursor />
         <FlyToCart />
         <Header />
         <CartSidebar />
       <main className="flex-grow min-h-[100vh]">
-        <Suspense fallback={<LoadingScreen />}>
-          <Routes>
+        {loading ? (
+          <PageSkeleton />
+        ) : (
+          <Suspense fallback={<PageSkeleton />}>
+            <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<Products />} />
             <Route path="/product/:slug" element={<ProductDetails />} />
@@ -89,6 +91,7 @@ const AppContent: React.FC = () => {
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Suspense>
+        )}
       </main>
       <Footer />
         <FloatingContact />

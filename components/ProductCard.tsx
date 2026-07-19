@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Heart, ZoomIn } from 'lucide-react';
 import { Product } from '../types';
 import { useStore } from '../context/StoreContext';
@@ -16,6 +16,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, className = '' }) =>
   const { addToCart, wishlist, toggleWishlist, user } = useStore();
   const isInWishlist = wishlist.includes(product.id);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    if (isHovered && product.images && product.images.length > 1) {
+      intervalId = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % product.images!.length);
+      }, 1000); // 1 second interval
+    } else {
+      setCurrentImageIndex(0);
+    }
+    return () => clearInterval(intervalId);
+  }, [isHovered, product.images]);
 
   const handleToggleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -58,15 +72,42 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, className = '' }) =>
       )}
 
       {/* Image Area */}
-      <div className="aspect-square w-full p-4 flex items-center justify-center bg-transparent group-hover:bg-gray-50/50 transition-colors relative cursor-pointer" onClick={() => setIsZoomOpen(true)}>
-        <img 
-          src={optimizedImage} 
-          alt={product.name} 
-          loading="lazy"
-          className="max-h-full max-w-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500" 
-        />
+      <div 
+        className="aspect-square w-full p-4 bg-transparent group-hover:bg-gray-50/50 transition-colors relative cursor-pointer overflow-hidden" 
+        onClick={() => setIsZoomOpen(true)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <div className="w-full h-full relative flex items-center justify-center">
+          {product.images && product.images.length > 0 ? (
+            product.images.map((img, index) => {
+              let optImg = img;
+              if (optImg && optImg.includes('ik.imagekit.io') && !optImg.includes('tr=')) {
+                optImg += (optImg.includes('?') ? '&' : '?') + 'tr=w-400';
+              }
+              return (
+                <img 
+                  key={index}
+                  src={optImg} 
+                  alt={`${product.name} - image ${index + 1}`} 
+                  loading={index === 0 ? "lazy" : "eager"}
+                  className={`absolute max-h-full max-w-full object-contain mix-blend-multiply group-hover:scale-105 transition-all duration-700 ${
+                    index === currentImageIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                  }`} 
+                />
+              );
+            })
+          ) : (
+            <img 
+              src={optimizedImage} 
+              alt={product.name} 
+              loading="lazy"
+              className="max-h-full max-w-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500 absolute" 
+            />
+          )}
+        </div>
         {/* Zoom indicator on hover */}
-        <div className="absolute bottom-2 right-2 w-7 h-7 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <div className="absolute bottom-2 right-2 w-7 h-7 bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
           <ZoomIn size={14} />
         </div>
       </div>
