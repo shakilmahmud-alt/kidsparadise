@@ -20,7 +20,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, className = '' }) =>
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+    let intervalId: ReturnType<typeof setInterval>;
     if (isHovered && product.images && product.images.length > 1) {
       intervalId = setInterval(() => {
         setCurrentImageIndex((prev) => (prev + 1) % product.images!.length);
