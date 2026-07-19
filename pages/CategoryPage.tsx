@@ -463,38 +463,6 @@ const CategoryPage: React.FC = () => {
 
       {/* Main Content Area */}
       <div className="container mx-auto px-4 md:px-8 py-8">
-        {/* Subcategories Row Widgets */}
-        {subcategoryTree.length > 0 && (
-          <div className="mb-10 animate-fade-in">
-            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
-              Explore Subcategories
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {subcategoryTree.map(sub => (
-                <Link 
-                  key={sub.id} 
-                  to={`/category/${sub.slug || encodeURIComponent(sub.name)}`}
-                  className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-rose-100 hover:-translate-y-0.5 transition-all text-center flex flex-col items-center justify-center gap-3 group"
-                >
-                  {sub.image ? (
-                    <img 
-                      src={sub.image} 
-                      alt={sub.name} 
-                      className="w-12 h-12 object-cover rounded-full border border-gray-100 group-hover:scale-105 transition-all" 
-                    />
-                  ) : (
-                    <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center font-black text-sm">
-                      {sub.name[0]}
-                    </div>
-                  )}
-                  <span className="text-xs font-bold text-gray-700 group-hover:text-rose-500 transition-colors">
-                    {sub.name}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar Filters */}
