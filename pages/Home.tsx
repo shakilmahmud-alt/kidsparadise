@@ -569,7 +569,7 @@ const BrandScroller: React.FC<{ brands: Brand[] }> = ({ brands }) => {
               return (
                 <Link 
                   key={`${brand.id}-${idx}`}
-                  to={`/products?brand=${encodeURIComponent(brand.name)}`}
+                  to={`/products?brands=${encodeURIComponent(brand.name)}`}
                   className="flex flex-col items-center gap-2 group cursor-pointer flex-shrink-0 select-none"
                 >
                   {/* Logo wrapper frame with exactly 50x50 px child image */}

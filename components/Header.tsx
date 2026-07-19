@@ -363,7 +363,8 @@ const Header: React.FC = () => {
               <Link to="/" className={`${location.pathname === '/' ? 'text-[#e92c5d]' : 'hover:text-[#e92c5d]'} transition-colors`}>Home</Link>
               <Link to="/products" className={`${location.pathname === '/products' ? 'text-[#e92c5d]' : 'hover:text-[#e92c5d]'} transition-colors`}>Products</Link>
               <Link to="/my-account" className={`${location.pathname === '/my-account' ? 'text-[#e92c5d]' : 'hover:text-[#e92c5d]'} transition-colors`}>My Account</Link>
-              <Link to="/blog" className={`${location.pathname.startsWith('/blog') ? 'text-[#e92c5d]' : 'hover:text-[#e92c5d]'} transition-colors`}>Blog</Link>
+              <Link to="/about-us" className={`${location.pathname.startsWith('/about-us') ? 'text-[#e92c5d]' : 'hover:text-[#e92c5d]'} transition-colors`}>About Us</Link>
+              <Link to="/contact-us" className={`${location.pathname.startsWith('/contact-us') ? 'text-[#e92c5d]' : 'hover:text-[#e92c5d]'} transition-colors`}>Contact Us</Link>
               {isAdmin && (
                 <Link to="/admin" className={`${location.pathname.startsWith('/admin') ? 'text-[#e92c5d]' : 'hover:text-[#e92c5d]'} transition-colors font-bold`}>Dashboard</Link>
               )}
@@ -494,8 +495,11 @@ const Header: React.FC = () => {
               <Link to="/products" className="flex items-center justify-between px-4 py-3 text-gray-700 font-semibold hover:bg-gray-50 rounded-lg transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                 All Products
               </Link>
-              <Link to="/blog" className="flex items-center justify-between px-4 py-3 text-gray-700 font-semibold hover:bg-gray-50 rounded-lg transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
-                Blog
+              <Link to="/about-us" className="flex items-center justify-between px-4 py-3 text-gray-700 font-semibold hover:bg-gray-50 rounded-lg transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                About Us
+              </Link>
+              <Link to="/contact-us" className="flex items-center justify-between px-4 py-3 text-gray-700 font-semibold hover:bg-gray-50 rounded-lg transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                Contact Us
               </Link>
             </div>
 
