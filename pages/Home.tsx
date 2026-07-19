@@ -614,7 +614,31 @@ const BrandScroller: React.FC<{ brands: Brand[] }> = ({ brands }) => {
 const Home: React.FC = () => {
   const { products, banners, homeSections, categories, brands, loading } = useStore();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentVideoSlide, setCurrentVideoSlide] = useState(0);
+  const [currentAnim, setCurrentAnim] = useState('anim-slide-fade-up');
   const sliderRef = useRef<HTMLDivElement>(null);
+
+  const videoSlides = useMemo(() => [
+    {
+      title: "FOR YOUR LOVELY BABY",
+      desc: "With the most safe products for your baby like mother care. Get the original product here.",
+      link: "/products"
+    },
+    {
+      title: "EXCLUSIVE SHOES COLLECTION",
+      desc: "Colorful and smart shoes and sandals for your lovely baby.",
+      link: "/category/shoes-&-socks"
+    }
+  ], []);
+
+  useEffect(() => {
+    const animations = ['anim-slide-fade-up', 'anim-zoom-in', 'anim-flip-in-x', 'anim-fade-in-right', 'anim-blur-in'];
+    const interval = setInterval(() => {
+      setCurrentVideoSlide(prev => (prev + 1) % videoSlides.length);
+      setCurrentAnim(animations[Math.floor(Math.random() * animations.length)]);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [videoSlides.length]);
 
   // Randomize products for "Best Items for you" section
   const randomProducts = useMemo(() => {
@@ -787,219 +811,68 @@ const Home: React.FC = () => {
     <div className="w-full bg-white pb-20">
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 md:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Slider (Left 2/3) */}
-          <div ref={sliderRef} className="lg:col-span-2 relative rounded-xl overflow-hidden h-[280px] md:h-[450px]">
-            {loading ? (
-              <div className="absolute inset-0 bg-slate-100 animate-pulse flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-200/80 to-slate-100 animate-shimmer" style={{ backgroundSize: '200% 100%' }}></div>
-              </div>
-            ) : sliderBanners.length > 0 ? (
-              <>
-                {sliderBanners.map((banner, idx) => {
-                  const linkStr = banner.link || '';
-                  
-                  // Parse customized settings from link field
-                  const parts = linkStr.split('|');
-                  const actualLink = parts[0] || '';
-                  let align = 'left';
-                  let color = 'light';
-                  let show_btn = 'true';
-                  let desc = '';
+      <section className="relative w-full h-[500px] md:h-[700px] overflow-hidden mb-6 md:mb-12">
+        {/* Background Video */}
+        <div className="absolute inset-0 z-0 bg-black">
+          <video 
+            autoPlay 
+            loop 
+            muted 
+            playsInline 
+            className="w-full h-full object-cover opacity-70"
+          >
+            <source src="https://ik.imagekit.io/vrtbi4wsn/Videos/Zerobaby-home-video.mp4" type="video/mp4" />
+          </video>
+          {/* Fading gradient to blend with the white background of the page at the bottom and darken top for text */}
+          <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/40"></div>
+        </div>
 
-                  for (let i = 1; i < parts.length; i++) {
-                    const part = parts[i];
-                    if (part.startsWith('align:')) align = part.substring(6);
-                    else if (part.startsWith('color:')) color = part.substring(6);
-                    else if (part.startsWith('show_btn:')) show_btn = part.substring(9);
-                    else if (part.startsWith('desc:')) desc = decodeURIComponent(part.substring(5));
-                  }
+        {/* Content Overlay */}
+        <div className="container mx-auto px-4 md:px-8 h-full relative z-10 flex flex-col justify-center items-start">
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes slideFadeUp {
+              0% { opacity: 0; transform: translateY(30px); }
+              100% { opacity: 1; transform: translateY(0); }
+            }
+            .anim-slide-fade-up { animation: slideFadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-                  const isDarkText = color === 'dark';
+            @keyframes zoomIn {
+              0% { opacity: 0; transform: scale(0.8); }
+              100% { opacity: 1; transform: scale(1); }
+            }
+            .anim-zoom-in { animation: zoomIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-                  return (
-                    <div key={banner.id} className={`slide-${idx} absolute inset-0 transition-opacity duration-1000 ${idx === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
-                      <img src={`${banner.image_url}${banner.image_url?.includes('ik.imagekit.io') ? (banner.image_url.includes('?') ? '&' : '?') + 'tr=w-1200,q-80,f-auto' : ''}`} alt={banner.title} loading={idx === 0 ? "eager" : "lazy"} fetchPriority={idx === 0 ? "high" : "auto"} className="w-full h-full object-cover hero-image" />
-                      {(banner.title || banner.subtitle || desc) && (
-                        <div className={`absolute top-1/2 -translate-y-1/2 max-w-[85%] md:max-w-md drop-shadow-md p-3 md:p-4 flex flex-col ${isDarkText ? 'text-gray-900' : 'text-white'} ${align === 'right' ? 'right-4 md:right-12 items-end text-right' : 'left-4 md:left-12 items-start text-left'}`}>
-                          {banner.subtitle && (
-                            <p className={`hero-text px-2 py-0.5 md:px-3 md:py-1 rounded w-fit font-bold uppercase tracking-wider mb-2 md:mb-4 text-[10px] md:text-xs ${isDarkText ? 'bg-rose-500 text-white shadow-sm' : 'text-[#e92c5d] bg-white/90 shadow-sm'}`}>
-                              {banner.subtitle}
-                            </p>
-                          )}
-                          {banner.title && (
-                            <h2 className={`hero-text text-xl md:text-5xl font-black leading-tight mb-2 md:mb-3 ${isDarkText ? 'text-gray-900 drop-shadow-none' : 'text-white'}`} style={{ textShadow: isDarkText ? 'none' : '0 2px 8px rgba(0,0,0,0.4)' }}>
-                              {banner.title}
-                            </h2>
-                          )}
-                          {desc && (
-                            <p className={`hero-text text-[10px] md:text-sm mb-3 md:mb-6 font-semibold max-w-sm ${isDarkText ? 'text-gray-700' : 'text-white/90'}`} style={{ textShadow: isDarkText ? 'none' : '0 1px 4px rgba(0,0,0,0.4)' }}>
-                              {desc}
-                            </p>
-                          )}
-                          {show_btn === 'true' && (
-                            <a href={actualLink || '/products'} className="hero-text inline-block bg-[#e92c5d] hover:bg-[#c81d4a] text-white px-5 py-2 md:px-8 md:py-3.5 rounded-full font-bold transition-all shadow-lg hover:shadow-rose-500/50 uppercase tracking-widest text-[9px] md:text-xs">
-                              Shop Now ➝
-                            </a>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {sliderBanners.length > 1 && (
-                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-                    {sliderBanners.map((_, idx) => (
-                      <button key={idx} onClick={() => setCurrentSlide(idx)} className={`h-2 rounded-full transition-all duration-300 ${idx === currentSlide ? 'bg-[#e92c5d] w-8' : 'bg-white/50 w-2 hover:bg-white'}`} />
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-50 text-gray-400">
-                <span>No Banners Available</span>
-              </div>
-            )}
-          </div>
+            @keyframes flipInX {
+              0% { opacity: 0; transform: perspective(400px) rotateX(90deg); }
+              100% { opacity: 1; transform: perspective(400px) rotateX(0deg); }
+            }
+            .anim-flip-in-x { animation: flipInX 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-          {/* Right Banners (Right 1/3) */}
-          <div className="grid grid-cols-2 lg:flex lg:flex-col gap-3 lg:gap-6 h-full pb-2 lg:pb-0">
-            {/* Top Banner */}
-            {loading ? (
-              <div className="rounded-xl bg-slate-100 animate-pulse h-[135px] lg:h-[215px] lg:flex-1 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-200/80 to-slate-100 animate-shimmer" style={{ backgroundSize: '200% 100%' }}></div>
-              </div>
-            ) : rightTopBanner ? (() => {
-              const linkStr = rightTopBanner.link || '';
-              const parts = linkStr.split('|');
-              const actualLink = parts[0] || '';
-              let align = 'left';
-              let color = 'light';
-              let show_btn = 'true';
-              let desc = '';
+            @keyframes fadeInRight {
+              0% { opacity: 0; transform: translateX(40px); }
+              100% { opacity: 1; transform: translateX(0); }
+            }
+            .anim-fade-in-right { animation: fadeInRight 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-              for (let i = 1; i < parts.length; i++) {
-                const part = parts[i];
-                if (part.startsWith('align:')) align = part.substring(6);
-                else if (part.startsWith('color:')) color = part.substring(6);
-                else if (part.startsWith('show_btn:')) show_btn = part.substring(9);
-                else if (part.startsWith('desc:')) desc = decodeURIComponent(part.substring(5));
-              }
-
-              const isDarkText = color === 'dark';
-              const isRightAlign = align === 'right';
-
-              return (
-                <div className={`rounded-xl relative overflow-hidden flex flex-col justify-center group h-[135px] lg:h-[215px] lg:flex-1 p-3 lg:p-8 ${isRightAlign ? 'items-end' : 'items-start'}`}>
-                  <img src={`${rightTopBanner.image_url}${rightTopBanner.image_url?.includes('ik.imagekit.io') ? (rightTopBanner.image_url.includes('?') ? '&' : '?') + 'tr=w-600,q-80,f-auto' : ''}`} alt={rightTopBanner.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                  {!isDarkText && <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>}
-                  <div className={`relative z-10 w-full flex flex-col ${isRightAlign ? 'items-end text-right' : 'items-start text-left'}`}>
-                    {rightTopBanner.subtitle && (
-                      <span className={`font-black text-[8px] lg:text-xs mb-1 lg:mb-2 block uppercase tracking-wider ${isDarkText ? 'text-[#e92c5d]' : 'text-rose-300'}`}>
-                        {rightTopBanner.subtitle}
-                      </span>
-                    )}
-                    {rightTopBanner.title && (
-                      <h3 
-                        className={`text-xs lg:text-2xl font-black mb-1 lg:mb-2 leading-tight ${isDarkText ? 'text-gray-900' : 'text-white'}`}
-                        style={{ textShadow: isDarkText ? 'none' : '0 2px 4px rgba(0,0,0,0.3)' }}
-                      >
-                        {rightTopBanner.title}
-                      </h3>
-                    )}
-                    {desc && (
-                      <p 
-                        className={`text-[8px] lg:text-xs mb-2 lg:mb-4 max-w-[80%] font-semibold leading-relaxed ${isDarkText ? 'text-gray-600' : 'text-white/80'}`}
-                        style={{ textShadow: isDarkText ? 'none' : '0 1px 2px rgba(0,0,0,0.3)' }}
-                      >
-                        {desc}
-                      </p>
-                    )}
-                    {show_btn === 'true' && (
-                      <a 
-                        href={actualLink || '/products'} 
-                        className="inline-flex items-center justify-center gap-1 bg-[#e92c5d] hover:bg-[#c81d4a] text-white px-3 py-1 lg:px-5 lg:py-2 rounded-full font-bold text-[8px] lg:text-xs transition-all shadow-md hover:shadow-rose-500/30 uppercase tracking-widest w-fit"
-                      >
-                        Shop Now <ArrowRight size={10} className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              );
-            })() : (
-              <div className="rounded-xl bg-gray-50 relative overflow-hidden border border-gray-100 h-[135px] lg:h-[215px] lg:flex-1 lg:flex lg:flex-col lg:justify-center lg:p-6 group flex items-center justify-center text-gray-400 text-sm">
-                No Banner
-              </div>
-            )}
-
-            {/* Bottom Banner */}
-            {loading ? (
-              <div className="rounded-xl bg-slate-100 animate-pulse h-[135px] lg:h-[215px] lg:flex-1 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-200/80 to-slate-100 animate-shimmer" style={{ backgroundSize: '200% 100%' }}></div>
-              </div>
-            ) : rightBottomBanner ? (() => {
-              const linkStr = rightBottomBanner.link || '';
-              const parts = linkStr.split('|');
-              const actualLink = parts[0] || '';
-              let align = 'left';
-              let color = 'light';
-              let show_btn = 'true';
-              let desc = '';
-
-              for (let i = 1; i < parts.length; i++) {
-                const part = parts[i];
-                if (part.startsWith('align:')) align = part.substring(6);
-                else if (part.startsWith('color:')) color = part.substring(6);
-                else if (part.startsWith('show_btn:')) show_btn = part.substring(9);
-                else if (part.startsWith('desc:')) desc = decodeURIComponent(part.substring(5));
-              }
-
-              const isDarkText = color === 'dark';
-              const isRightAlign = align === 'right';
-
-              return (
-                <div className={`rounded-xl relative overflow-hidden flex flex-col justify-center group h-[135px] lg:h-[215px] lg:flex-1 p-3 lg:p-8 ${isRightAlign ? 'items-end' : 'items-start'}`}>
-                  <img src={`${rightBottomBanner.image_url}${rightBottomBanner.image_url?.includes('ik.imagekit.io') ? (rightBottomBanner.image_url.includes('?') ? '&' : '?') + 'tr=w-600,q-80,f-auto' : ''}`} alt={rightBottomBanner.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                  {!isDarkText && <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>}
-                  <div className={`relative z-10 w-full flex flex-col ${isRightAlign ? 'items-end text-right' : 'items-start text-left'}`}>
-                    {rightBottomBanner.subtitle && (
-                      <span className={`font-black text-[8px] lg:text-xs mb-1 lg:mb-2 block uppercase tracking-wider ${isDarkText ? 'text-[#e92c5d]' : 'text-rose-300'}`}>
-                        {rightBottomBanner.subtitle}
-                      </span>
-                    )}
-                    {rightBottomBanner.title && (
-                      <h3 
-                        className={`text-xs lg:text-2xl font-black mb-1 lg:mb-2 leading-tight ${isDarkText ? 'text-gray-900' : 'text-white'}`}
-                        style={{ textShadow: isDarkText ? 'none' : '0 2px 4px rgba(0,0,0,0.3)' }}
-                      >
-                        {rightBottomBanner.title}
-                      </h3>
-                    )}
-                    {desc && (
-                      <p 
-                        className={`text-[8px] lg:text-xs mb-2 lg:mb-4 max-w-[80%] font-semibold leading-relaxed ${isDarkText ? 'text-gray-600' : 'text-white/80'}`}
-                        style={{ textShadow: isDarkText ? 'none' : '0 1px 2px rgba(0,0,0,0.3)' }}
-                      >
-                        {desc}
-                      </p>
-                    )}
-                    {show_btn === 'true' && (
-                      <a 
-                        href={actualLink || '/products'} 
-                        className="inline-flex items-center justify-center gap-1 bg-[#e92c5d] hover:bg-[#c81d4a] text-white px-3 py-1 lg:px-5 lg:py-2 rounded-full font-bold text-[8px] lg:text-xs transition-all shadow-md hover:shadow-rose-500/30 uppercase tracking-widest w-fit"
-                      >
-                        Shop Now <ArrowRight size={10} className="w-2.5 h-2.5 group-hover:translate-x-0.5 transition-transform" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              );
-            })() : (
-              <div className="rounded-xl bg-gray-50 relative overflow-hidden border border-gray-100 h-[135px] lg:h-[215px] lg:flex-1 lg:flex lg:flex-col lg:justify-center lg:p-6 group flex items-center justify-center text-gray-400 text-sm">
-                No Banner
-              </div>
-            )}
+            @keyframes blurIn {
+              0% { opacity: 0; filter: blur(10px); transform: scale(1.05); }
+              100% { opacity: 1; filter: blur(0); transform: scale(1); }
+            }
+            .anim-blur-in { animation: blurIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+          `}} />
+          <div key={currentVideoSlide} className={`max-w-2xl text-white mt-12 md:mt-24 ${currentAnim}`}>
+            <h2 className="text-4xl md:text-7xl font-black leading-tight mb-4 drop-shadow-2xl text-white">
+              {videoSlides[currentVideoSlide].title}
+            </h2>
+            <p className="text-sm md:text-xl mb-8 font-semibold text-white/95 drop-shadow-xl max-w-lg">
+              {videoSlides[currentVideoSlide].desc}
+            </p>
+            <Link 
+              to={videoSlides[currentVideoSlide].link} 
+              className="inline-block bg-[#e92c5d] hover:bg-[#c81d4a] text-white px-8 py-3.5 md:px-10 md:py-4 rounded-full font-black transition-all shadow-[0_4px_15px_rgba(233,44,93,0.4)] hover:shadow-[0_6px_20px_rgba(233,44,93,0.6)] uppercase tracking-widest text-xs md:text-sm"
+            >
+              Shop Now ➝
+            </Link>
           </div>
         </div>
       </section>
