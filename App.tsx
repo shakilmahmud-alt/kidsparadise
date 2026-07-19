@@ -23,6 +23,7 @@ const BlogPost = React.lazy(() => import('./pages/BlogPost'));
 const DynamicPage = React.lazy(() => import('./pages/DynamicPage'));
 const CategoryPage = React.lazy(() => import('./pages/CategoryPage'));
 import PageSkeleton from './components/PageSkeleton';
+import LoadingScreen from './components/LoadingScreen';
 import { StoreProvider, useStore } from './context/StoreContext';
 
 const AppContent: React.FC = () => {
@@ -63,20 +64,26 @@ const AppContent: React.FC = () => {
 
   return (
     <>
+      {loading && pathname === '/' && <LoadingScreen />}
       <div className="min-h-screen flex flex-col font-sans">
         <CustomCursor />
         <FlyToCart />
         <Header />
         <CartSidebar />
       <main className="flex-grow min-h-[100vh]">
-        {loading ? (
-          <PageSkeleton />
-        ) : (
-          <Suspense fallback={<PageSkeleton />}>
-            <Routes>
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/product/:slug" element={<ProductDetails />} />
+            <Route path="/products" element={
+              <Suspense fallback={<PageSkeleton type="products" />}>
+                <Products />
+              </Suspense>
+            } />
+            <Route path="/product/:slug" element={
+              <Suspense fallback={<PageSkeleton type="product-details" />}>
+                <ProductDetails />
+              </Suspense>
+            } />
             <Route path="/my-account" element={<MyAccount />} />
             <Route path="/login" element={<Login />} />
             <Route path="/blog" element={<Blog />} />
@@ -86,12 +93,15 @@ const AppContent: React.FC = () => {
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/order-success/:orderId" element={<OrderSuccess />} />
-            <Route path="/category/:categorySlug" element={<CategoryPage />} />
+            <Route path="/category/:categorySlug" element={
+              <Suspense fallback={<PageSkeleton type="category" />}>
+                <CategoryPage />
+              </Suspense>
+            } />
             <Route path="/:slug" element={<DynamicPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Suspense>
-        )}
       </main>
       <Footer />
         <FloatingContact />

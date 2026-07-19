@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import ProductCard from '../components/ProductCard';
+import PageSkeleton from '../components/PageSkeleton';
 import { Filter, SlidersHorizontal, ChevronRight, Search, RotateCcw, Check, Star, Coins, Home, Grid, X } from 'lucide-react';
 import { Category } from '../types';
 
@@ -398,6 +399,10 @@ const CategoryPage: React.FC = () => {
       setPriceRange([0, 10000]);
     }
   };
+
+  if (loading && products.length === 0) {
+    return <PageSkeleton type="category" />;
+  }
 
   if (!currentCategory) {
     return (

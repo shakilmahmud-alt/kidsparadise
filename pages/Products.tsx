@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useLayoutEffect, useRef, useCallba
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import ProductCard from '../components/ProductCard';
+import PageSkeleton from '../components/PageSkeleton';
 import { Filter, SlidersHorizontal, ChevronRight, ChevronDown, Search, RotateCcw, Check, Star, Coins, X } from 'lucide-react';
 import { Category } from '../types';
 import gsap from 'gsap';
@@ -427,13 +428,16 @@ const Products: React.FC = () => {
        newParams.set('orderby', currentOrderBy);
     }
     setSearchParams(newParams, { replace: true });
-    
     if (products.length > 0) {
       setPriceRange(minMax);
     } else {
       setPriceRange([0, 10000]);
     }
   };
+
+  if (loading && products.length === 0) {
+    return <PageSkeleton type="products" />;
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20">
