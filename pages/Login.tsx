@@ -16,7 +16,18 @@ const Login: React.FC = () => {
     fullName: ''
   });
   
+  const { user, isAdmin } = useStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      if (isAdmin) {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/my-account', { replace: true });
+      }
+    }
+  }, [user, isAdmin, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));

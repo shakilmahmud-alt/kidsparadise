@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { supabase } from '../lib/supabase';
+import { useParams, useNavigate } from 'react-router-dom';
 
 import {
   Package, ShoppingBag, Plus, Trash2, X, ShieldCheck, Pencil,
@@ -35,7 +36,20 @@ const Admin: React.FC = () => {
     blogPosts, addBlogPost, updateBlogPost, deleteBlogPost
   } = useStore();
 
-  const [adminTab, setAdminTabState] = useState<string>('products');
+  const { tab } = useParams();
+  const navigate = useNavigate();
+  const [adminTab, setAdminTabInternal] = useState<string>(tab || 'products');
+
+  useEffect(() => {
+    if (tab && tab !== adminTab) {
+      setAdminTabInternal(tab);
+    }
+  }, [tab]);
+
+  const setAdminTabState = (newTab: string) => {
+    setAdminTabInternal(newTab);
+    navigate(`/admin/${newTab}`);
+  };
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Products Table Search, Filters, Sort & Pagination States

@@ -361,20 +361,35 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   useEffect(() => {
-    // Fetch public data instantly on load to remove the white loading screen delay
-    fetchData(null, false).finally(() => setLoading(false));
+    // Fetch public data instantly on load
+    fetchData(null, false);
 
-    supabase.auth.getSession().then(({ data: { session } }) => initializeAuth(session?.user || null));
+    // Track if we've already initialized to avoid double-firing
+    let isInitialized = false;
+
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        if (!isInitialized) {
+          isInitialized = true;
+          initializeAuth(session?.user || null).finally(() => setLoading(false));
+        } else if (event === 'SIGNED_IN') {
+          initializeAuth(session?.user || null);
+        }
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setUserProfile(null);
         setAddresses([]);
         setUsers([]);
         setWishlist([]);
-        // Don't need to refetch public data on logout
-      } else if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        initializeAuth(session?.user || null);
+        setLoading(false);
+      }
+    });
+
+    // Fallback in case INITIAL_SESSION doesn't fire (some older Supabase versions)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isInitialized) {
+        isInitialized = true;
+        initializeAuth(session?.user || null).finally(() => setLoading(false));
       }
     });
     return () => authListener.subscription.unsubscribe();
