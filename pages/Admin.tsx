@@ -838,6 +838,16 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
 
     let finalVariants = prodForm.variants;
 
+    let baseSlug = prodForm.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+    let finalSlug = baseSlug;
+    let counter = 2;
+    
+    // Check against existing products to ensure unique slug
+    while (products.some(p => p.slug === finalSlug && p.id !== editingItem?.data.id)) {
+      finalSlug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
     const data: Omit<Product, 'id'> = {
       name: prodForm.name,
       price: finalPrice,
@@ -852,7 +862,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
       isFeatured: prodForm.isFeatured,
       variants: finalVariants,
       filterAttributes: prodForm.tempAttributes.filter(a => a.options.length > 0),
-      slug: prodForm.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '')
+      slug: finalSlug
     };
 
     try {
