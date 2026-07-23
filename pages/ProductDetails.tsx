@@ -28,7 +28,7 @@ const ProductDetails: React.FC = () => {
   const relatedProducts = useMemo(() => {
     if (!product) return [];
     return products
-      .filter(p => p.category === product.category && p.id !== product.id)
+      .filter(p => p.category.some(cat => product.category.includes(cat)) && p.id !== product.id)
       .slice(0, 4);
   }, [products, product]);
 
@@ -238,7 +238,7 @@ const ProductDetails: React.FC = () => {
           <div className="lg:w-1/2 space-y-6">
             <div className="space-y-4">
               <span className="text-[11px] font-black text-[#e92c5d] uppercase tracking-[2px] bg-[#fdf2f5] px-4 py-1.5 rounded-full inline-block">
-                {product.category}
+                {product.category.join(', ')}
               </span>
               <h1 className="text-xl md:text-4xl font-black text-gray-800 tracking-tight leading-tight flex flex-wrap items-center gap-2">
                 {product.name}

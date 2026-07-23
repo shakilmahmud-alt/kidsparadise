@@ -176,7 +176,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     name: String(p.name || ''),
     price: Number(p.price || 0),
     originalPrice: p.original_price ? Number(p.original_price) : undefined,
-    category: String(p.category || 'General'),
+    category: p.category ? String(p.category).split(',').map(c => c.trim()) : [],
     images: Array.isArray(p.images) ? p.images : (p.image_url ? [p.image_url] : []),
     badge: p.badge, unit: p.unit,
     shortDescription: p.short_description, description: String(p.description || ''),
@@ -191,7 +191,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (p.name !== undefined) db.name = p.name;
     if (p.price !== undefined) db.price = Number(p.price);
     if (p.originalPrice !== undefined) db.original_price = p.originalPrice ? Number(p.originalPrice) : null;
-    if (p.category !== undefined) db.category = p.category;
+    if (p.category !== undefined) db.category = p.category.join(',');
     if (p.images !== undefined) db.images = p.images;
     if (p.badge !== undefined) db.badge = p.badge;
     if (p.unit !== undefined) db.unit = p.unit;

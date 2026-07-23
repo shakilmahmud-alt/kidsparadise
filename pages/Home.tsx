@@ -938,10 +938,10 @@ const Home: React.FC = () => {
                 .filter(c => validCategoryIds.includes(c.id))
                 .map(c => c.name);
 
-              items = items.filter(p => validCategoryNames.includes(p.category));
+              items = items.filter(p => p.category.some(cat => validCategoryNames.includes(cat)));
             } else {
               // Fallback if category object not found (legacy behavior)
-              items = items.filter(p => p.category === section.filterValue);
+              items = items.filter(p => p.category.includes(section.filterValue));
             }
           }
 

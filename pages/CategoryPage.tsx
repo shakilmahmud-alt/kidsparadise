@@ -165,7 +165,7 @@ const CategoryPage: React.FC = () => {
   // Filter products that belong to the active category family
   const categoryProducts = useMemo(() => {
     if (!currentCategory) return [];
-    return products.filter(p => descendantNames.includes(p.category));
+    return products.filter(p => p.category.some(cat => descendantNames.includes(cat)));
   }, [products, descendantNames, currentCategory]);
 
   // Initialize price range based on current category products and URL

@@ -78,13 +78,15 @@ const Admin: React.FC = () => {
   // Product Selector for Order Editing
   const [orderProductSearch, setOrderProductSearch] = useState('');
   const [showProductPicker, setShowProductPicker] = useState(false);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
 
   // Form States
   const [prodForm, setProdForm] = useState({
-    name: '', basePrice: '', salePrice: '', category: '', description: '', shortDescription: '', images: [] as string[],
+    name: '', basePrice: '', salePrice: '', category: [] as string[], description: '', shortDescription: '', images: [] as string[],
     unit: '', sku: '', brand: '', isFeatured: false, variants: [] as Variant[], tempAttributes: [] as { name: string, options: string[] }[]
   });
 
@@ -125,6 +127,24 @@ const Admin: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [adminTab]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
+    };
+
+    if (showCategoryDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCategoryDropdown]);
 
   // Report States
   const [reportStartDate, setReportStartDate] = useState(() => {
@@ -912,7 +932,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
       name: p.name,
       basePrice: (hasSale ? p.originalPrice : p.price)?.toString() || '0',
       salePrice: (hasSale ? p.price.toString() : ''),
-      category: p.category,
+      category: Array.isArray(p.category) ? p.category : [],
       description: p.description,
       shortDescription: p.shortDescription || '',
       images: p.images || [],
@@ -1128,7 +1148,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
   const closeForms = () => {
     setEditingItem(null); setIsAdding(null); setViewingOrder(null); setReplyingTo(null);
     setIsEditingOrder(false); setEditingOrderData(null);
-    setProdForm({ name: '', basePrice: '', salePrice: '', category: '', description: '', shortDescription: '', images: [], unit: '', sku: '', brand: '', isFeatured: false, variants: [], tempAttributes: [] });
+    setProdForm({ name: '', basePrice: '', salePrice: '', category: [], description: '', shortDescription: '', images: [], unit: '', sku: '', brand: '', isFeatured: false, variants: [], tempAttributes: [] });
     setCatForm({ name: '', parentId: null, image: '' });
     setBrandForm({ name: '', slug: '', logo_url: '' });
     setAttrForm({ name: '' });
@@ -2792,7 +2812,53 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                     <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Sale Price (৳) - Optional</label><input type="number" value={prodForm.salePrice} onChange={e => setProdForm({ ...prodForm, salePrice: e.target.value })} className="w-full bg-[#f9fdfb] border border-[#d1e7dd] rounded-xl px-6 py-4 text-sm font-bold text-rose-600" placeholder="Selling Price" /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-2"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Category</label><select required value={prodForm.category} onChange={e => setProdForm({ ...prodForm, category: e.target.value })} className="w-full bg-[#f9fdfb] border border-[#d1e7dd] rounded-xl px-6 py-4 text-sm font-bold appearance-none"><option value="">Select Category</option>{hierarchicalCategories.map(c => <option key={c.id} value={c.name}>{'\u00A0'.repeat(c.level * 4) + (c.level > 0 ? '↳ ' : '') + c.name}</option>)}</select></div>
+                    <div className="space-y-2 relative" ref={categoryDropdownRef}>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Categories</label>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                          className="w-full bg-[#f9fdfb] border border-[#d1e7dd] rounded-xl px-6 py-4 text-sm font-bold flex justify-between items-center text-left"
+                        >
+                          <span className="truncate">
+                            {prodForm.category.length > 0
+                              ? prodForm.category.join(', ')
+                              : 'Select Categories'}
+                          </span>
+                          <ChevronDown size={16} className="text-gray-400" />
+                        </button>
+                        {showCategoryDropdown && (
+                          <div 
+                            className="absolute z-[100] w-full mt-2 bg-white border border-[#d1e7dd] rounded-xl shadow-xl max-h-60 overflow-y-auto overscroll-contain custom-scrollbar"
+                            onWheel={(e) => e.stopPropagation()}
+                          >
+                            {hierarchicalCategories.map((c) => (
+                              <label
+                                key={c.id}
+                                className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0"
+                              >
+                                <span className="mr-3 text-gray-300 select-none">
+                                  {'\u00A0'.repeat(c.level * 4) + (c.level > 0 ? '↳ ' : '')}
+                                </span>
+                                <input
+                                  type="checkbox"
+                                  className="w-4 h-4 text-rose-500 rounded border-gray-300 focus:ring-rose-500 mr-3 cursor-pointer"
+                                  checked={prodForm.category.includes(c.name)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setProdForm({ ...prodForm, category: [...prodForm.category, c.name] });
+                                    } else {
+                                      setProdForm({ ...prodForm, category: prodForm.category.filter(cat => cat !== c.name) });
+                                    }
+                                  }}
+                                />
+                                <span className="text-sm font-medium text-gray-700">{c.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     <div className="space-y-2 relative">
                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Brand</label>
                       <div className="relative">

@@ -205,7 +205,7 @@ const Products: React.FC = () => {
     const filterCategories = selectedCategory === 'All' ? [] : getDescendantsOnly(selectedCategory);
 
     return products.filter(p => {
-      const categoryMatch = selectedCategory === 'All' || filterCategories.includes(p.category);
+      const categoryMatch = selectedCategory === 'All' || p.category.some(c => filterCategories.includes(c));
       return categoryMatch;
     });
   }, [products, categories, selectedCategory]);
@@ -323,7 +323,7 @@ const Products: React.FC = () => {
       const searchMatch = !searchQuery ||
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.category.toLowerCase().includes(searchQuery.toLowerCase());
+        p.category.some(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const brandMatch = selectedBrands.length === 0 || (p.brand && selectedBrands.includes(p.brand));
 

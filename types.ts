@@ -4,7 +4,7 @@ export interface Product {
   name: string;
   price: number;
   originalPrice?: number;
-  category: string;
+  category: string[];
   images: string[];
   badge?: string;
   unit?: string;
