@@ -193,8 +193,10 @@ const Admin: React.FC = () => {
     const salesByCategory: Record<string, number> = {};
     filteredOrders.forEach(o => {
       o.items.forEach(item => {
-        const cat = item.category || 'Uncategorized';
-        salesByCategory[cat] = (salesByCategory[cat] || 0) + (item.price * item.quantity);
+        const cats = Array.isArray(item.category) && item.category.length > 0 ? item.category : ['Uncategorized'];
+        cats.forEach(c => {
+          salesByCategory[c] = (salesByCategory[c] || 0) + (item.price * item.quantity);
+        });
       });
     });
 
@@ -644,19 +646,19 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
         p.name.toLowerCase().includes(searchLower) ||
         (p.sku && p.sku.toLowerCase().includes(searchLower)) ||
         (p.brand && p.brand.toLowerCase().includes(searchLower)) ||
-        (p.category && p.category.toLowerCase().includes(searchLower))
+        (p.category && p.category.some(c => c.toLowerCase().includes(searchLower)))
       );
     }
 
     // Category (Parent Category)
     if (prodFilterCat && !prodFilterSubCat) {
       const allowedCategories = getCategoryDescendantNames(prodFilterCat);
-      result = result.filter(p => allowedCategories.includes(p.category));
+      result = result.filter(p => p.category && p.category.some(c => allowedCategories.includes(c)));
     }
 
     // Subcategory
     if (prodFilterSubCat) {
-      result = result.filter(p => p.category === prodFilterSubCat);
+      result = result.filter(p => p.category && p.category.includes(prodFilterSubCat));
     }
 
     // Stock Status
@@ -1352,7 +1354,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
     if (!orderProductSearch.trim()) return [];
     return products.filter(p =>
       p.name.toLowerCase().includes(orderProductSearch.toLowerCase()) ||
-      p.category.toLowerCase().includes(orderProductSearch.toLowerCase())
+      p.category && p.category.some(c => c.toLowerCase().includes(orderProductSearch.toLowerCase()))
     ).slice(0, 5);
   }, [products, orderProductSearch]);
 

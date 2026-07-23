@@ -941,7 +941,7 @@ const Home: React.FC = () => {
               items = items.filter(p => p.category.some(cat => validCategoryNames.includes(cat)));
             } else {
               // Fallback if category object not found (legacy behavior)
-              items = items.filter(p => p.category.includes(section.filterValue));
+              items = items.filter(p => p.category && section.filterValue && p.category.includes(section.filterValue));
             }
           }
 
