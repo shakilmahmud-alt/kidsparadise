@@ -140,7 +140,7 @@ export const InlineImageZoom: React.FC<InlineImageZoomProps> = ({ imageUrl, altT
       <img
         src={imageUrl}
         alt={altText}
-        className={`absolute inset-0 w-full h-full object-contain pointer-events-none transition-transform duration-75 ease-out ${isZoomed ? 'scale-[2.5] opacity-100' : 'scale-100 opacity-0'}`}
+        className={`absolute inset-0 w-full h-full object-contain pointer-events-none transition-transform duration-75 ease-out ${isZoomed ? 'scale-[1.5] opacity-100' : 'scale-100 opacity-0'}`}
         style={{
           transformOrigin: `${mousePos.x}% ${mousePos.y}%`,
         }}

@@ -6,7 +6,6 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import FloatingContact from './components/FloatingContact';
 import CartSidebar from './components/CartSidebar';
-import CustomCursor from './components/CustomCursor';
 import FlyToCart from './components/FlyToCart';
 import Home from './pages/Home';
 const Products = React.lazy(() => import('./pages/Products'));
@@ -66,7 +65,6 @@ const AppContent: React.FC = () => {
     <>
       {loading && pathname === '/' && <LoadingScreen />}
       <div className="min-h-screen flex flex-col font-sans">
-        <CustomCursor />
         <FlyToCart />
         <Header />
         <CartSidebar />
