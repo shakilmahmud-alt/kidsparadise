@@ -2655,7 +2655,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-5 text-slate-400 font-medium text-sm">{p.category}</td>
+                            <td className="px-6 py-5 text-slate-400 font-medium text-sm">{Array.isArray(p.category) ? p.category.join(', ') : p.category}</td>
                             <td className="px-6 py-5">
                               <div className="flex flex-col">
                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">MRP: {mrp?.toFixed(2)}</span>
