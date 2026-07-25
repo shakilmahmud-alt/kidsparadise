@@ -26,13 +26,10 @@ const LoadingScreen: React.FC = () => {
       </div>
 
       <div className="mt-8 flex flex-col items-center gap-3">
-        <h2 className="text-xl md:text-2xl font-black bg-gradient-to-r from-[#e92c5d] to-rose-400 bg-clip-text text-transparent tracking-tight">
-          Zero Baby
-        </h2>
-        
+
         <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
           <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
-          <span>Preparing your store...</span>
+          <span>Welcome to Zero Baby</span>
         </div>
       </div>
 
