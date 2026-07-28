@@ -2754,10 +2754,17 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                         try {
                           const newUrls: string[] = [];
                           for (const file of files) {
-                            const authRes = await fetch('/api/imagekit-auth');
+                            let authRes;
+                            try {
+                              authRes = await fetch('/api/imagekit-auth');
+                            } catch (e: any) {
+                              throw new Error(`Authentication fetch failed (Network/Adblocker/CORS): ${e.message}`);
+                            }
+
                             if (!authRes.ok) {
                               const errData = await authRes.json().catch(() => ({}));
                               console.error('Failed to authenticate for file', file.name, errData);
+                              alert(`Authentication failed: Server returned ${authRes.status}. Ensure backend is running and env vars are set.`);
                               continue; // Skip this file and try the next one
                             }
                             const authData = await authRes.json();
@@ -2771,10 +2778,15 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                             formData.append('fileName', file.name);
                             formData.append('folder', '/products');
                             
-                            const uploadRes = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
-                              method: 'POST',
-                              body: formData,
-                            });
+                            let uploadRes;
+                            try {
+                              uploadRes = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
+                                method: 'POST',
+                                body: formData,
+                              });
+                            } catch (e: any) {
+                              throw new Error(`ImageKit upload blocked (Network/Adblocker): ${e.message}. Please disable adblockers and try again.`);
+                            }
                             
                             if (uploadRes.ok) {
                               const data = await uploadRes.json();
@@ -2782,6 +2794,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                             } else {
                               const errData = await uploadRes.json().catch(() => ({}));
                               console.error('ImageKit direct upload failed for', file.name, ':', errData);
+                              alert(`Upload failed: ${errData.message || 'Unknown error from ImageKit'}`);
                             }
                           }
                           
