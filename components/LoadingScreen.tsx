@@ -16,6 +16,7 @@ const LoadingScreen: React.FC = () => {
             alt="Zero Baby" 
             width="160"
             height="64"
+            fetchPriority="high"
             className="h-8 md:h-12 w-auto object-contain" 
           />
           
