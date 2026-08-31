@@ -4,7 +4,11 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 import { Link } from 'react-router-dom';
-import { ArrowRight, Truck, Headphones, ShieldCheck, Award } from 'lucide-react';
+import { 
+  ArrowRight, Truck, Headphones, ShieldCheck, Award, 
+  ChevronLeft, ChevronRight, Car, Gamepad2, Shirt, Sparkles, 
+  Baby, Package, ShoppingBag, Flame, Star 
+} from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { useStore } from '../context/StoreContext';
 import { HomeSection, Product, Brand } from '../types';
@@ -614,31 +618,106 @@ const BrandScroller: React.FC<{ brands: Brand[] }> = ({ brands }) => {
 const Home: React.FC = () => {
   const { products, banners, homeSections, categories, brands, loading } = useStore();
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [currentVideoSlide, setCurrentVideoSlide] = useState(0);
-  const [currentAnim, setCurrentAnim] = useState('anim-slide-fade-up');
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+  const [isHeroHovered, setIsHeroHovered] = useState(false);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
 
-  const videoSlides = useMemo(() => [
+  const getCategoryIcon = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('car') || n.includes('vehicle')) return <Car size={16} />;
+    if (n.includes('toy') || n.includes('game') || n.includes('play')) return <Gamepad2 size={16} />;
+    if (n.includes('fashion') || n.includes('cloth') || n.includes('apparel') || n.includes('boy') || n.includes('girl')) return <Shirt size={16} />;
+    if (n.includes('feed') || n.includes('bottle') || n.includes('nurs')) return <Sparkles size={16} />;
+    if (n.includes('care') || n.includes('hygiene') || n.includes('bath') || n.includes('skin')) return <Baby size={16} />;
+    if (n.includes('gear') || n.includes('travel') || n.includes('stroller')) return <Package size={16} />;
+    return <ShoppingBag size={16} />;
+  };
+
+  const parentCategories = useMemo(() => {
+    const buildTree = (parentId: string | null = null, level = 0): any[] => {
+      return categories
+        .filter(c => c.parentId == parentId)
+        .map(c => ({
+          ...c,
+          children: buildTree(c.id, level + 1),
+          level
+        }));
+    };
+    return buildTree(null);
+  }, [categories]);
+
+  const kidsHeroCards = useMemo(() => [
     {
-      title: "FOR YOUR LOVELY BABY",
-      desc: "With the most safe products for your baby like mother care. Get the original product here.",
-      link: "/products"
+      id: 'hc-1',
+      subTitle: 'Speed, Adventure & Fun',
+      mainHeading: 'Electric & Diecast Supercars',
+      discountBadge: '-20%',
+      buttonText: 'Explore Cars',
+      buttonLink: '/category/vehicles',
+      imageUrl: 'https://images.unsplash.com/photo-1594787318286-3d835c1d207f?auto=format&fit=crop&q=80&w=800',
+      bgClass: 'bg-gradient-to-br from-amber-700 via-rose-900 to-black'
     },
     {
-      title: "EXCLUSIVE SHOES COLLECTION",
-      desc: "Colorful and smart shoes and sandals for your lovely baby.",
-      link: "/category/shoes-&-socks"
+      id: 'hc-2',
+      subTitle: 'Brain Development & Learning',
+      mainHeading: 'Wooden Montessori & Blocks',
+      discountBadge: '-25%',
+      buttonText: 'Shop Smart Toys',
+      buttonLink: '/category/toys',
+      imageUrl: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&q=80&w=800',
+      bgClass: 'bg-gradient-to-br from-slate-800 via-zinc-900 to-black'
+    },
+    {
+      id: 'hc-3',
+      subTitle: 'Safe, Light & Comfortable Travel',
+      mainHeading: 'Luxury Baby Strollers & Gear',
+      discountBadge: '-20%',
+      buttonText: 'Shop Strollers',
+      buttonLink: '/category/gear-travel',
+      imageUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&q=80&w=800',
+      bgClass: 'bg-gradient-to-br from-sky-800 via-blue-950 to-black'
+    },
+    {
+      id: 'hc-4',
+      subTitle: '100% BPA Free & Soft Silicone',
+      mainHeading: 'Feeding Bottles & Care Sets',
+      discountBadge: '-15%',
+      buttonText: 'Shop Baby Care',
+      buttonLink: '/category/feeding-nursing',
+      imageUrl: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&q=80&w=800',
+      bgClass: 'bg-gradient-to-br from-blue-700 via-indigo-950 to-black'
+    },
+    {
+      id: 'hc-5',
+      subTitle: '100% Organic Soft Cotton',
+      mainHeading: 'Newborn 10-Piece Gift Sets',
+      discountBadge: '-35%',
+      buttonText: 'Shop Outfits',
+      buttonLink: '/category/boys-fashion',
+      imageUrl: 'https://images.unsplash.com/photo-1522771930-78848d9293e8?auto=format&fit=crop&q=80&w=800',
+      bgClass: 'bg-gradient-to-br from-[#F0264C] via-rose-950 to-black'
     }
   ], []);
 
+  const visibleCardsCount = 3;
+  const maxSlideIndex = Math.max(0, kidsHeroCards.length - visibleCardsCount);
+
+  const handleNextHeroSlide = () => {
+    setHeroSlideIndex(prev => (prev >= maxSlideIndex ? 0 : prev + 1));
+  };
+
+  const handlePrevHeroSlide = () => {
+    setHeroSlideIndex(prev => (prev <= 0 ? maxSlideIndex : prev - 1));
+  };
+
   useEffect(() => {
-    const animations = ['anim-slide-fade-up', 'anim-zoom-in', 'anim-flip-in-x', 'anim-fade-in-right', 'anim-blur-in'];
+    if (isHeroHovered) return;
     const interval = setInterval(() => {
-      setCurrentVideoSlide(prev => (prev + 1) % videoSlides.length);
-      setCurrentAnim(animations[Math.floor(Math.random() * animations.length)]);
-    }, 4000);
+      handleNextHeroSlide();
+    }, 5000);
     return () => clearInterval(interval);
-  }, [videoSlides.length]);
+  }, [isHeroHovered, maxSlideIndex]);
 
   // Randomize products for "Best Items for you" section
   const randomProducts = useMemo(() => {
@@ -810,70 +889,196 @@ const Home: React.FC = () => {
   return (
     <div className="w-full bg-white pb-20">
 
-      {/* Hero Section */}
-      <section className="relative w-full h-[500px] md:h-[700px] overflow-hidden mb-6 md:mb-12">
-        {/* Background Video */}
-        <div className="absolute inset-0 z-0 bg-black">
-          <video 
-            autoPlay 
-            loop 
-            muted 
-            playsInline 
-            className="w-full h-full object-cover opacity-70"
-          >
-            <source src="https://ik.imagekit.io/vrtbi4wsn/Videos/Zerobaby-home-video.mp4" type="video/mp4" />
-          </video>
-          {/* Fading gradient to blend with the white background of the page at the bottom and darken top for text */}
-          <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/40"></div>
-        </div>
+      {/* Wokiee-inspired Hero Section with Left Category Menu and Sliding Multi-Card Carousel */}
+      <section className="container mx-auto px-4 md:px-8 mb-8 md:mb-14 relative z-20">
+        <div className="flex gap-6 relative">
+          
+          {/* 1. Left Vertical "Shop by" Category Sidebar (Desktop Only) */}
+          <div className="hidden lg:block w-64 flex-shrink-0 z-30">
+            <div className="bg-white border-x border-b border-gray-200 rounded-b-xl shadow-lg overflow-visible">
+              <div className="divide-y divide-gray-100 py-1">
+                {parentCategories.slice(0, 10).map(cat => {
+                  const hasChildren = cat.children && cat.children.length > 0;
+                  const isHot = cat.name.toLowerCase().includes('car') || cat.name.toLowerCase().includes('toy');
+                  return (
+                    <div
+                      key={cat.id}
+                      className="relative group/cat px-4 py-2.5 hover:bg-rose-50/60 transition-colors cursor-pointer text-gray-700 text-xs font-medium flex items-center justify-between"
+                      onMouseEnter={() => setHoveredCategory(cat.id)}
+                      onMouseLeave={() => setHoveredCategory(null)}
+                    >
+                      <Link 
+                        to={`/category/${cat.slug || encodeURIComponent(cat.name)}`}
+                        className="flex items-center gap-3 w-full min-w-0"
+                      >
+                        <span className="text-[#F0264C] group-hover/cat:scale-110 transition-transform">
+                          {getCategoryIcon(cat.name)}
+                        </span>
+                        <span className="truncate group-hover/cat:text-[#F0264C] transition-colors">{cat.name}</span>
+                        {isHot && (
+                          <span className="bg-[#F0264C] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-tighter ml-auto">
+                            HOT
+                          </span>
+                        )}
+                      </Link>
 
-        {/* Content Overlay */}
-        <div className="container mx-auto px-4 md:px-8 h-full relative z-10 flex flex-col justify-center items-start">
-          <style dangerouslySetInnerHTML={{ __html: `
-            @keyframes slideFadeUp {
-              0% { opacity: 0; transform: translateY(30px); }
-              100% { opacity: 1; transform: translateY(0); }
-            }
-            .anim-slide-fade-up { animation: slideFadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+                      {hasChildren && (
+                        <ChevronRight size={13} className="text-gray-400 group-hover/cat:text-[#F0264C] transition-colors ml-1 flex-shrink-0" />
+                      )}
 
-            @keyframes zoomIn {
-              0% { opacity: 0; transform: scale(0.8); }
-              100% { opacity: 1; transform: scale(1); }
-            }
-            .anim-zoom-in { animation: zoomIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+                      {/* Multi-level Flyout Mega-menu to the Right */}
+                      {hasChildren && hoveredCategory === cat.id && (
+                        <div className="absolute left-full top-0 w-72 bg-white border border-gray-200 shadow-2xl rounded-xl p-3 z-50 -ml-1 animate-in fade-in duration-200 min-h-full">
+                          <div className="font-bold text-xs text-gray-900 border-b border-gray-100 pb-2 mb-2 flex items-center justify-between">
+                            <span>{cat.name}</span>
+                            <Link to={`/category/${cat.slug || encodeURIComponent(cat.name)}`} className="text-[10px] text-[#F0264C] hover:underline font-bold">
+                              View All
+                            </Link>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            {cat.children.map((subCat: any) => {
+                              const hasSubChildren = subCat.children && subCat.children.length > 0;
+                              return (
+                                <div key={subCat.id} className="group/sub relative py-1">
+                                  <Link
+                                    to={`/category/${subCat.slug || encodeURIComponent(subCat.name)}`}
+                                    className="text-xs text-gray-600 hover:text-[#F0264C] font-semibold flex items-center justify-between"
+                                  >
+                                    <span>{subCat.name}</span>
+                                    {hasSubChildren && <span className="text-[10px] text-gray-400">({subCat.children.length})</span>}
+                                  </Link>
+                                  {hasSubChildren && (
+                                    <div className="pl-3 mt-1 flex flex-col gap-1 border-l border-gray-100">
+                                      {subCat.children.map((subSub: any) => (
+                                        <Link
+                                          key={subSub.id}
+                                          to={`/category/${subSub.slug || encodeURIComponent(subSub.name)}`}
+                                          className="text-[11px] text-gray-500 hover:text-[#F0264C] transition-colors"
+                                        >
+                                          • {subSub.name}
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
 
-            @keyframes flipInX {
-              0% { opacity: 0; transform: perspective(400px) rotateX(90deg); }
-              100% { opacity: 1; transform: perspective(400px) rotateX(0deg); }
-            }
-            .anim-flip-in-x { animation: flipInX 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-            @keyframes fadeInRight {
-              0% { opacity: 0; transform: translateX(40px); }
-              100% { opacity: 1; transform: translateX(0); }
-            }
-            .anim-fade-in-right { animation: fadeInRight 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-            @keyframes blurIn {
-              0% { opacity: 0; filter: blur(10px); transform: scale(1.05); }
-              100% { opacity: 1; filter: blur(0); transform: scale(1); }
-            }
-            .anim-blur-in { animation: blurIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-          `}} />
-          <div key={currentVideoSlide} className={`max-w-2xl text-white mt-12 md:mt-24 ${currentAnim}`}>
-            <h2 className="text-4xl md:text-7xl font-black leading-tight mb-4 drop-shadow-2xl text-white">
-              {videoSlides[currentVideoSlide].title}
-            </h2>
-            <p className="text-sm md:text-xl mb-8 font-semibold text-white/95 drop-shadow-xl max-w-lg">
-              {videoSlides[currentVideoSlide].desc}
-            </p>
-            <Link 
-              to={videoSlides[currentVideoSlide].link} 
-              className="inline-block bg-[#e92c5d] hover:bg-[#c81d4a] text-white px-8 py-3.5 md:px-10 md:py-4 rounded-full font-black transition-all shadow-[0_4px_15px_rgba(233,44,93,0.4)] hover:shadow-[0_6px_20px_rgba(233,44,93,0.6)] uppercase tracking-widest text-xs md:text-sm"
-            >
-              Shop Now ➝
-            </Link>
+                {/* Extra Static Helpful Links */}
+                <Link to="/products?filter=sale" className="px-4 py-2.5 hover:bg-rose-50/60 text-xs font-semibold text-[#F0264C] flex items-center gap-3">
+                  <Flame size={16} />
+                  <span>Special Offers & Deals</span>
+                  <span className="bg-yellow-400 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full ml-auto">-35%</span>
+                </Link>
+                <Link to="/products" className="px-4 py-2.5 hover:bg-rose-50/60 text-xs font-semibold text-gray-700 flex items-center gap-3">
+                  <Star size={16} className="text-amber-500" />
+                  <span>Best Selling Kids Items</span>
+                </Link>
+              </div>
+            </div>
           </div>
+
+          {/* 2. Hero Multi-Card Carousel Slider (Cards slide smoothly underneath the category menu) */}
+          <div className="flex-1 min-w-0 overflow-hidden relative rounded-2xl">
+            {/* Sliding Track */}
+            <div
+              className="flex transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
+              style={{
+                transform: `translateX(-${heroSlideIndex * (100 / visibleCardsCount)}%)`
+              }}
+              onMouseEnter={() => setIsHeroHovered(true)}
+              onMouseLeave={() => setIsHeroHovered(false)}
+            >
+              {kidsHeroCards.map((card) => (
+                <div
+                  key={card.id}
+                  className="w-full md:w-1/2 lg:w-1/3 flex-shrink-0 px-2.5"
+                >
+                  <div className={`relative h-[380px] md:h-[420px] rounded-2xl overflow-hidden shadow-md group ${card.bgClass} flex flex-col justify-between p-6 text-white transition-all duration-300 hover:shadow-xl`}>
+                    
+                    {/* Background Graphic & Image */}
+                    <div className="absolute inset-0 z-0">
+                      <img
+                        src={card.imageUrl}
+                        alt={card.mainHeading}
+                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 opacity-85"
+                        loading="eager"
+                      />
+                      {/* Dark overlay for crystal clear typography */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent"></div>
+                    </div>
+
+                    {/* Top Right Vibrant Yellow Discount Badge */}
+                    <div className="relative z-10 flex justify-end items-start">
+                      {card.discountBadge && (
+                        <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-yellow-400 text-black font-black flex items-center justify-center text-lg md:text-xl shadow-lg border-2 border-white transform rotate-6 group-hover:rotate-0 transition-transform">
+                          {card.discountBadge}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bottom Content Area */}
+                    <div className="relative z-10 flex flex-col items-start mt-auto">
+                      <span className="text-xs font-bold uppercase tracking-wider text-rose-300 mb-1 drop-shadow">
+                        {card.subTitle}
+                      </span>
+                      <h3 className="text-xl md:text-2xl font-black text-white leading-tight mb-4 drop-shadow-md">
+                        {card.mainHeading}
+                      </h3>
+                      <Link
+                        to={card.buttonLink}
+                        className="bg-white hover:bg-[#F0264C] text-gray-900 hover:text-white px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-md flex items-center gap-2 group-hover:gap-3"
+                      >
+                        <span>{card.buttonText}</span>
+                        <ArrowRight size={14} />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Bottom Controls (Circle Arrow Buttons & Pagination Dots like Image 3) */}
+            <div className="flex items-center justify-start gap-4 mt-4 px-2">
+              {/* Prev Button */}
+              <button
+                onClick={handlePrevHeroSlide}
+                className="w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-700 hover:bg-[#F0264C] hover:text-white hover:border-[#F0264C] shadow-sm flex items-center justify-center transition-colors"
+                aria-label="Previous Slide"
+              >
+                <ChevronLeft size={16} />
+              </button>
+
+              {/* Pagination Dots */}
+              <div className="flex items-center gap-2">
+                {Array.from({ length: maxSlideIndex + 1 }).map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setHeroSlideIndex(idx)}
+                    className={`h-2.5 rounded-full transition-all duration-300 ${heroSlideIndex === idx ? 'w-8 bg-[#F0264C]' : 'w-2.5 bg-gray-300 hover:bg-gray-400'}`}
+                    aria-label={`Go to slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Next Button */}
+              <button
+                onClick={handleNextHeroSlide}
+                className="w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-700 hover:bg-[#F0264C] hover:text-white hover:border-[#F0264C] shadow-sm flex items-center justify-center transition-colors"
+                aria-label="Next Slide"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+
+          </div>
+
         </div>
       </section>
 
