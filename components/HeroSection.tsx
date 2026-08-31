@@ -14,15 +14,13 @@ import {
   ArrowRight,
   Menu,
   ShoppingBag,
-  Tv,
-  Smartphone,
-  Laptop,
-  Watch,
   Rocket,
   Star,
   BookOpen,
   Heart,
-  Package
+  Package,
+  Award,
+  Globe
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Category } from '../types';
@@ -47,7 +45,7 @@ const buildCategoryTree = (categories: Category[], parentId: string | null = nul
     }));
 };
 
-// Precise Icons for the 8 Main Parent Categories (Image 3)
+// Icons for the 8 Main Parent Categories
 const getMainCategoryIcon = (name: string) => {
   const lower = name.toLowerCase();
   if (lower.includes('apparel') || lower.includes('cloth') || lower.includes('fashion')) return <Shirt size={19} className="text-[#556885]" strokeWidth={1.8} />;
@@ -87,10 +85,10 @@ const SlideDownButton: React.FC<{
 };
 
 export const HeroSection: React.FC = () => {
-  const { categories, searchQuery, setSearchQuery, products } = useStore();
+  const { categories, searchQuery, setSearchQuery, products, brands } = useStore();
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState<CategoryNode | null>(null);
-  const [activeSubCategory, setActiveSubCategory] = useState<CategoryNode | null>(null);
+  const [isHoveringBrands, setIsHoveringBrands] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -99,8 +97,8 @@ export const HeroSection: React.FC = () => {
     return buildCategoryTree(categories);
   }, [categories]);
 
-  // Order parent categories exactly matching the 8 main categories in 3rd image:
-  // Apparels, Toys, Gear & Travel, Care & Hygiene, Furniture & Bedding, Stationery, Mother Care, Others
+  // Order parent categories exactly matching:
+  // 1. Apparels, 2. Toys, 3. Gear & Travel, 4. Care & Hygiene, 5. Furniture & Bedding, 6. Stationery, 7. Mother Care, 8. Others
   const orderedParentCategories = useMemo(() => {
     const order = [
       'apparels',
@@ -125,7 +123,12 @@ export const HeroSection: React.FC = () => {
     });
   }, [categoryTree]);
 
-  // Crystal Clear Banners (NO discount % badges, pure quality highlights)
+  // Clean list of brands for flyout
+  const activeBrands = useMemo(() => {
+    return (brands || []).slice(0, 16);
+  }, [brands]);
+
+  // 5 Crystal Clear Kids Paradise Product Banners (Width 423px x Height 535px)
   const heroBanners = useMemo(() => [
     {
       id: 1,
@@ -135,7 +138,7 @@ export const HeroSection: React.FC = () => {
       subtitle: 'Smooth Suspension & Certified Safety',
       title: "Your Baby's Dream Ride",
       btnText: 'Shop Strollers',
-      btnBg: 'bg-[#F0264C]', // Main brand color
+      btnBg: 'bg-[#F0264C]', // Main brand color #F0264C
       link: '/category/gear-travel',
       image: 'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=800&q=95',
       bgColor: 'bg-[#c85a32]'
@@ -194,23 +197,24 @@ export const HeroSection: React.FC = () => {
     }
   ], []);
 
-  const totalBanners = heroBanners.length;
+  // Max slide index (5 banners total - 3 visible in viewport = max slide index 2, or cycle 0 to 2)
+  const maxSlide = Math.max(0, heroBanners.length - 3);
 
   const nextSlide = () => {
-    setCurrentSlide(prev => (prev + 1) % totalBanners);
+    setCurrentSlide(prev => (prev >= maxSlide ? 0 : prev + 1));
   };
 
   const prevSlide = () => {
-    setCurrentSlide(prev => (prev - 1 + totalBanners) % totalBanners);
+    setCurrentSlide(prev => (prev <= 0 ? maxSlide : prev - 1));
   };
 
   useEffect(() => {
     if (isPaused) return;
     const interval = setInterval(() => {
       nextSlide();
-    }, 5000);
+    }, 5500);
     return () => clearInterval(interval);
-  }, [isPaused, totalBanners]);
+  }, [isPaused, maxSlide]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery || searchQuery.length < 2) return [];
@@ -231,7 +235,7 @@ export const HeroSection: React.FC = () => {
     <section className="w-full bg-[#f8f9fa] pt-4 pb-8 md:pb-12 font-sans overflow-hidden">
       <div className="container mx-auto px-4 md:px-8">
 
-        {/* Top Row: "Shop by" Header (#F0264C) + Search Input */}
+        {/* Top Header Row: "Shop by" Header (#F0264C) + Search Input */}
         <div className="flex flex-col lg:flex-row items-stretch gap-4 mb-4">
           
           {/* "Shop by" Header Box */}
@@ -302,16 +306,18 @@ export const HeroSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Body: Unified Layout where Cards Slide UNDER the "Shop by" Menu */}
+        {/* Hero Body: Unified Layout where Cards Slide UNDER the "Shop by" Menu and leave right margin clear */}
         <div 
-          className="relative min-h-[545px] overflow-hidden"
+          className="relative min-h-[560px] overflow-hidden"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
 
-          {/* 1. Left Side: The 8 Main Parent Categories (Image 3) with High Z-Index */}
+          {/* 1. Left Side: Full Sidebar Menu (8 Categories + New Arrivals + Best Sellers + Brands) */}
           <div className="hidden lg:block absolute left-0 top-0 w-[270px] min-w-[270px] bg-white rounded-b-md border border-gray-200 shadow-md z-30">
             <nav className="divide-y divide-gray-100">
+              
+              {/* 8 Main Parent Categories */}
               {orderedParentCategories.map((cat, idx) => {
                 const hasChildren = cat.children && cat.children.length > 0;
                 const isHovered = activeCategory?.id === cat.id;
@@ -322,16 +328,13 @@ export const HeroSection: React.FC = () => {
                     className="relative group/menuitem"
                     onMouseEnter={() => {
                       setActiveCategory(cat);
-                      setActiveSubCategory(null);
+                      setIsHoveringBrands(false);
                     }}
-                    onMouseLeave={() => {
-                      setActiveCategory(null);
-                      setActiveSubCategory(null);
-                    }}
+                    onMouseLeave={() => setActiveCategory(null)}
                   >
                     <Link
                       to={`/category/${cat.slug || encodeURIComponent(cat.name)}`}
-                      className={`flex items-center justify-between px-4 py-3.5 text-[14px] transition-colors ${
+                      className={`flex items-center justify-between px-4 py-3 text-[14px] transition-colors ${
                         isHovered 
                           ? 'text-[#0072CE] font-bold bg-blue-50/50' 
                           : 'text-[#1d293f] font-semibold hover:text-[#0072CE]'
@@ -357,7 +360,7 @@ export const HeroSection: React.FC = () => {
                       </div>
                     </Link>
 
-                    {/* Multi-Level Flyout Submenu on Hover (Parent -> Sub -> Sub-Sub) */}
+                    {/* Multi-Level Flyout Submenu on Hover */}
                     {hasChildren && isHovered && (
                       <div 
                         className="absolute left-full top-0 ml-1 w-[560px] bg-white border border-gray-200 rounded-lg shadow-2xl p-6 z-50 animate-in fade-in duration-150 min-h-[420px]"
@@ -377,12 +380,9 @@ export const HeroSection: React.FC = () => {
                           </Link>
                         </div>
 
-                        {/* Multi-Column Grid of Sub-Categories and Sub-Sub-Categories */}
                         <div className="grid grid-cols-2 gap-6">
                           {cat.children.map(subCat => (
                             <div key={subCat.id} className="space-y-2">
-                              
-                              {/* Sub-Category Link */}
                               <Link
                                 to={`/category/${subCat.slug || encodeURIComponent(subCat.name)}`}
                                 className="font-bold text-sm text-[#1d293f] hover:text-[#0072CE] transition-colors flex items-center justify-between border-b border-gray-100 pb-1.5 group/sub"
@@ -393,7 +393,6 @@ export const HeroSection: React.FC = () => {
                                 )}
                               </Link>
 
-                              {/* Sub-Sub-Categories List */}
                               {subCat.children && subCat.children.length > 0 && (
                                 <ul className="space-y-1.5 pl-1">
                                   {subCat.children.map(subSubCat => (
@@ -417,10 +416,95 @@ export const HeroSection: React.FC = () => {
                   </div>
                 );
               })}
+
+              {/* 9. New Arrivals */}
+              <Link
+                to="/products?filter=new"
+                onMouseEnter={() => { setActiveCategory(null); setIsHoveringBrands(false); }}
+                className="flex items-center justify-between px-4 py-3 text-[14px] font-semibold text-[#1d293f] hover:text-[#0072CE] hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3.5">
+                  <Rocket size={19} className="text-[#556885]" strokeWidth={1.8} />
+                  <span>New Arrivals</span>
+                </div>
+              </Link>
+
+              {/* 10. Best Sellers */}
+              <Link
+                to="/products?filter=bestseller"
+                onMouseEnter={() => { setActiveCategory(null); setIsHoveringBrands(false); }}
+                className="flex items-center justify-between px-4 py-3 text-[14px] font-semibold text-[#1d293f] hover:text-[#0072CE] hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3.5">
+                  <Star size={19} className="text-[#556885]" strokeWidth={1.8} />
+                  <span>Best Sellers</span>
+                </div>
+              </Link>
+
+              {/* 11. Brands (With Flyout on Hover) */}
+              <div
+                className="relative group/menuitem"
+                onMouseEnter={() => {
+                  setIsHoveringBrands(true);
+                  setActiveCategory(null);
+                }}
+                onMouseLeave={() => setIsHoveringBrands(false)}
+              >
+                <Link
+                  to="/products"
+                  className={`flex items-center justify-between px-4 py-3 text-[14px] transition-colors rounded-b-md ${
+                    isHoveringBrands 
+                      ? 'text-[#0072CE] font-bold bg-blue-50/50' 
+                      : 'text-[#1d293f] font-semibold hover:text-[#0072CE]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <Award size={19} className="text-[#556885]" strokeWidth={1.8} />
+                    <span>Brands</span>
+                  </div>
+                  <ChevronRight size={15} className={`transition-transform text-gray-400 ${isHoveringBrands ? 'text-[#0072CE] translate-x-0.5' : ''}`} />
+                </Link>
+
+                {/* Brands Flyout on Hover */}
+                {isHoveringBrands && (
+                  <div 
+                    className="absolute left-full top-0 ml-1 w-[480px] bg-white border border-gray-200 rounded-lg shadow-2xl p-6 z-50 animate-in fade-in duration-150"
+                    onMouseEnter={() => setIsHoveringBrands(true)}
+                    onMouseLeave={() => setIsHoveringBrands(false)}
+                  >
+                    <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100">
+                      <h3 className="font-extrabold text-base text-[#1d293f] flex items-center gap-2">
+                        <Award size={18} className="text-[#F0264C]" />
+                        Official Brands
+                      </h3>
+                      <Link 
+                        to="/products" 
+                        className="text-xs font-bold text-[#F0264C] hover:underline flex items-center gap-1"
+                      >
+                        All Brands <ArrowRight size={12} />
+                      </Link>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      {activeBrands.map(b => (
+                        <Link
+                          key={b.id}
+                          to={`/products?brand=${b.slug || b.name}`}
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 text-sm font-semibold text-gray-700 hover:text-[#0072CE] transition-colors border border-gray-100"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                          <span className="truncate">{b.name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </nav>
           </div>
 
-          {/* 2. Sliding Track: Starts at pl-[286px] and slides UNDER the menu when currentSlide > 0 */}
+          {/* 2. Sliding Track: Starts at offset pl-[286px] and slides UNDER the menu, leaving right space empty */}
           <div className="w-full lg:pl-[286px] overflow-visible">
             <div 
               className="flex transition-transform duration-700 ease-in-out gap-4 z-10"
@@ -428,9 +512,9 @@ export const HeroSection: React.FC = () => {
                 transform: `translateX(-${currentSlide * 439}px)`
               }}
             >
-              {heroBanners.concat(heroBanners).concat(heroBanners).map((banner, index) => (
+              {heroBanners.map((banner) => (
                 <div
-                  key={`${banner.id}-${index}`}
+                  key={banner.id}
                   className="w-[423px] min-w-[423px] max-w-[423px] h-[535px] flex-shrink-0"
                 >
                   <div className={`relative w-full h-full rounded-[20px] overflow-hidden shadow-sm group select-none ${banner.bgColor}`}>
@@ -470,7 +554,7 @@ export const HeroSection: React.FC = () => {
                         </p>
                       )}
 
-                      {/* Animated Roll-Down Button */}
+                      {/* Animated Roll-Down Button with Requested Alternating Colors */}
                       <div className="mt-1">
                         <SlideDownButton
                           to={banner.link}
@@ -490,18 +574,18 @@ export const HeroSection: React.FC = () => {
           {/* 3. Slider Bottom Controls: Left/Right Arrow Buttons + Dot Indicators */}
           <div className="flex items-center justify-between mt-4 px-1 lg:pl-[286px]">
             
-            {/* Pagination Dots */}
+            {/* Pagination Dots (0 to maxSlide) */}
             <div className="flex items-center gap-2">
-              {heroBanners.map((_, idx) => (
+              {Array.from({ length: maxSlide + 1 }).map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentSlide(idx)}
                   className={`h-2.5 rounded-full transition-all duration-300 ${
-                    currentSlide % totalBanners === idx
+                    currentSlide === idx
                       ? 'w-7 bg-[#F0264C]'
                       : 'w-2.5 bg-gray-300 hover:bg-gray-400'
                   }`}
-                  title={`Slide ${idx + 1}`}
+                  title={`Slide Position ${idx + 1}`}
                 />
               ))}
             </div>
