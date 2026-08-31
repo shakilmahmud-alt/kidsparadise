@@ -10,11 +10,6 @@ import {
   Box, 
   Shirt, 
   Layers, 
-  Zap, 
-  Gift, 
-  Heart, 
-  Truck, 
-  Flame, 
   Search,
   ArrowRight,
   Menu,
@@ -25,7 +20,9 @@ import {
   Watch,
   Rocket,
   Star,
-  Award
+  BookOpen,
+  Heart,
+  Package
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Category } from '../types';
@@ -50,26 +47,18 @@ const buildCategoryTree = (categories: Category[], parentId: string | null = nul
     }));
 };
 
-const getCategoryIcon = (name: string, index: number) => {
+// Precise Icons for the 8 Main Parent Categories (Image 3)
+const getMainCategoryIcon = (name: string) => {
   const lower = name.toLowerCase();
-  if (lower.includes('toy') || lower.includes('lego')) return <Sparkles size={20} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('vehicle') || lower.includes('car') || lower.includes('bike')) return <Car size={20} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('doll')) return <Smile size={20} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('care') || lower.includes('hygiene') || lower.includes('bath') || lower.includes('skin')) return <ShieldCheck size={20} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('feed') || lower.includes('bottle') || lower.includes('food')) return <ShoppingBag size={20} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('gear') || lower.includes('travel') || lower.includes('stroller')) return <Truck size={20} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('block') || lower.includes('puzzle')) return <Box size={20} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('fashion') || lower.includes('cloth') || lower.includes('apparel') || lower.includes('shoe')) return <Shirt size={20} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('furniture') || lower.includes('bed')) return <Layers size={20} className="text-[#556885]" strokeWidth={1.8} />;
-  
-  const fallbackIcons = [
-    <ShoppingBag key="sb" size={20} className="text-[#556885]" strokeWidth={1.8} />,
-    <Tv key="tv" size={20} className="text-[#556885]" strokeWidth={1.8} />,
-    <Smartphone key="sm" size={20} className="text-[#556885]" strokeWidth={1.8} />,
-    <Laptop key="lp" size={20} className="text-[#556885]" strokeWidth={1.8} />,
-    <Watch key="wt" size={20} className="text-[#556885]" strokeWidth={1.8} />
-  ];
-  return fallbackIcons[index % fallbackIcons.length];
+  if (lower.includes('apparel') || lower.includes('cloth') || lower.includes('fashion')) return <Shirt size={19} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('toy') || lower.includes('lego')) return <Sparkles size={19} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('gear') || lower.includes('travel') || lower.includes('stroller')) return <Car size={19} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('care & hygiene') || lower.includes('hygiene') || lower.includes('bath') || lower.includes('skin')) return <ShieldCheck size={19} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('furniture') || lower.includes('bed')) return <Layers size={19} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('stationery')) return <BookOpen size={19} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('mother')) return <Heart size={19} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('other')) return <Package size={19} className="text-[#556885]" strokeWidth={1.8} />;
+  return <ShoppingBag size={19} className="text-[#556885]" strokeWidth={1.8} />;
 };
 
 // Roll-Down Text Animation Button (User Requested)
@@ -101,6 +90,7 @@ export const HeroSection: React.FC = () => {
   const { categories, searchQuery, setSearchQuery, products } = useStore();
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState<CategoryNode | null>(null);
+  const [activeSubCategory, setActiveSubCategory] = useState<CategoryNode | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -109,11 +99,33 @@ export const HeroSection: React.FC = () => {
     return buildCategoryTree(categories);
   }, [categories]);
 
-  const displayCategories = useMemo(() => {
-    return categoryTree.slice(0, 9);
+  // Order parent categories exactly matching the 8 main categories in 3rd image:
+  // Apparels, Toys, Gear & Travel, Care & Hygiene, Furniture & Bedding, Stationery, Mother Care, Others
+  const orderedParentCategories = useMemo(() => {
+    const order = [
+      'apparels',
+      'toys',
+      'gear & travel',
+      'care & hygiene',
+      'furniture & bedding',
+      'stationery',
+      'mother care',
+      'others'
+    ];
+
+    const parents = categoryTree.filter(c => c.parentId === null || c.parentId === '0' || c.parentId === undefined || c.parentId === '');
+    
+    return [...parents].sort((a, b) => {
+      const idxA = order.indexOf(a.name.toLowerCase());
+      const idxB = order.indexOf(b.name.toLowerCase());
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.name.localeCompare(b.name);
+    });
   }, [categoryTree]);
 
-  // Crystal Clear Banners with specific Button Colors and NO discount % badges
+  // Crystal Clear Banners (NO discount % badges, pure quality highlights)
   const heroBanners = useMemo(() => [
     {
       id: 1,
@@ -219,16 +231,16 @@ export const HeroSection: React.FC = () => {
     <section className="w-full bg-[#f8f9fa] pt-4 pb-8 md:pb-12 font-sans overflow-hidden">
       <div className="container mx-auto px-4 md:px-8">
 
-        {/* Top Header Row: "Shop by" Header + Large Search Input (Image 1 & 2) */}
+        {/* Top Row: "Shop by" Header (#F0264C) + Search Input */}
         <div className="flex flex-col lg:flex-row items-stretch gap-4 mb-4">
           
-          {/* "Shop by" Header Box (#F0264C Background as requested) */}
+          {/* "Shop by" Header Box */}
           <div className="hidden lg:flex w-[270px] min-w-[270px] items-center justify-between bg-[#F0264C] text-white px-5 py-3.5 rounded-t-md font-bold tracking-tight shadow-sm flex-shrink-0">
             <span className="text-base font-bold tracking-wide">Shop by</span>
             <Menu size={22} className="text-white" strokeWidth={2.5} />
           </div>
 
-          {/* Search Bar matching Wokiee clean aesthetic */}
+          {/* Search Bar */}
           <div className="flex-1 relative">
             <form onSubmit={handleSearchSubmit} className="flex items-center w-full h-[52px] bg-[#f0f2f5] rounded-md border border-gray-200/90 overflow-hidden focus-within:border-gray-400 focus-within:bg-white transition-all">
               <input
@@ -297,10 +309,10 @@ export const HeroSection: React.FC = () => {
           onMouseLeave={() => setIsPaused(false)}
         >
 
-          {/* 1. Left Side: "Shop by" Menu with z-30 (Cards slide behind/under it) */}
+          {/* 1. Left Side: The 8 Main Parent Categories (Image 3) with High Z-Index */}
           <div className="hidden lg:block absolute left-0 top-0 w-[270px] min-w-[270px] bg-white rounded-b-md border border-gray-200 shadow-md z-30">
             <nav className="divide-y divide-gray-100">
-              {displayCategories.map((cat, idx) => {
+              {orderedParentCategories.map((cat, idx) => {
                 const hasChildren = cat.children && cat.children.length > 0;
                 const isHovered = activeCategory?.id === cat.id;
 
@@ -308,8 +320,14 @@ export const HeroSection: React.FC = () => {
                   <div
                     key={cat.id}
                     className="relative group/menuitem"
-                    onMouseEnter={() => setActiveCategory(cat)}
-                    onMouseLeave={() => setActiveCategory(null)}
+                    onMouseEnter={() => {
+                      setActiveCategory(cat);
+                      setActiveSubCategory(null);
+                    }}
+                    onMouseLeave={() => {
+                      setActiveCategory(null);
+                      setActiveSubCategory(null);
+                    }}
                   >
                     <Link
                       to={`/category/${cat.slug || encodeURIComponent(cat.name)}`}
@@ -320,12 +338,12 @@ export const HeroSection: React.FC = () => {
                       }`}
                     >
                       <div className="flex items-center gap-3.5">
-                        {getCategoryIcon(cat.name, idx)}
+                        {getMainCategoryIcon(cat.name)}
                         <span className="truncate">{cat.name.replace(/&amp;/g, '&')}</span>
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        {idx === 2 && (
+                        {idx === 3 && (
                           <span className="bg-[#FF4D15] text-white text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded-[4px]">
                             Hot
                           </span>
@@ -335,22 +353,20 @@ export const HeroSection: React.FC = () => {
                             New
                           </span>
                         )}
-                        {hasChildren && (
-                          <ChevronRight size={15} className={`transition-transform text-gray-400 ${isHovered ? 'text-[#0072CE] translate-x-0.5' : ''}`} />
-                        )}
+                        <ChevronRight size={15} className={`transition-transform text-gray-400 ${isHovered ? 'text-[#0072CE] translate-x-0.5' : ''}`} />
                       </div>
                     </Link>
 
-                    {/* Flyout MegaMenu on Hover */}
+                    {/* Multi-Level Flyout Submenu on Hover (Parent -> Sub -> Sub-Sub) */}
                     {hasChildren && isHovered && (
                       <div 
-                        className="absolute left-full top-0 ml-1 w-[540px] bg-white border border-gray-200 rounded-lg shadow-2xl p-6 z-50 animate-in fade-in duration-150 min-h-[380px]"
+                        className="absolute left-full top-0 ml-1 w-[560px] bg-white border border-gray-200 rounded-lg shadow-2xl p-6 z-50 animate-in fade-in duration-150 min-h-[420px]"
                         onMouseEnter={() => setActiveCategory(cat)}
                         onMouseLeave={() => setActiveCategory(null)}
                       >
                         <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100">
                           <h3 className="font-extrabold text-base text-[#1d293f] flex items-center gap-2">
-                            {getCategoryIcon(cat.name, idx)}
+                            {getMainCategoryIcon(cat.name)}
                             {cat.name.replace(/&amp;/g, '&')}
                           </h3>
                           <Link 
@@ -361,23 +377,30 @@ export const HeroSection: React.FC = () => {
                           </Link>
                         </div>
 
+                        {/* Multi-Column Grid of Sub-Categories and Sub-Sub-Categories */}
                         <div className="grid grid-cols-2 gap-6">
                           {cat.children.map(subCat => (
                             <div key={subCat.id} className="space-y-2">
+                              
+                              {/* Sub-Category Link */}
                               <Link
                                 to={`/category/${subCat.slug || encodeURIComponent(subCat.name)}`}
-                                className="font-bold text-sm text-[#1d293f] hover:text-[#0072CE] transition-colors block border-b border-gray-100 pb-1.5"
+                                className="font-bold text-sm text-[#1d293f] hover:text-[#0072CE] transition-colors flex items-center justify-between border-b border-gray-100 pb-1.5 group/sub"
                               >
-                                {subCat.name.replace(/&amp;/g, '&')}
+                                <span>{subCat.name.replace(/&amp;/g, '&')}</span>
+                                {subCat.children && subCat.children.length > 0 && (
+                                  <span className="text-[10px] text-gray-400 group-hover/sub:text-[#0072CE]">({subCat.children.length})</span>
+                                )}
                               </Link>
 
+                              {/* Sub-Sub-Categories List */}
                               {subCat.children && subCat.children.length > 0 && (
                                 <ul className="space-y-1.5 pl-1">
                                   {subCat.children.map(subSubCat => (
                                     <li key={subSubCat.id}>
                                       <Link
                                         to={`/category/${subSubCat.slug || encodeURIComponent(subSubCat.name)}`}
-                                        className="text-xs text-gray-600 hover:text-[#0072CE] transition-colors flex items-center gap-1.5"
+                                        className="text-xs text-gray-600 hover:text-[#0072CE] transition-colors flex items-center gap-1.5 hover:translate-x-1 duration-150"
                                       >
                                         <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
                                         {subSubCat.name.replace(/&amp;/g, '&')}
@@ -394,26 +417,6 @@ export const HeroSection: React.FC = () => {
                   </div>
                 );
               })}
-
-              {/* New Arrivals & Best Sellers */}
-              <Link
-                to="/products?filter=new"
-                className="flex items-center justify-between px-4 py-3.5 text-[14px] font-semibold text-[#1d293f] hover:text-[#0072CE] hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-3.5">
-                  <Rocket size={20} className="text-[#556885]" strokeWidth={1.8} />
-                  <span>New Arrivals</span>
-                </div>
-              </Link>
-              <Link
-                to="/products?filter=bestseller"
-                className="flex items-center justify-between px-4 py-3.5 text-[14px] font-semibold text-[#1d293f] hover:text-[#0072CE] hover:bg-gray-50 transition-colors rounded-b-md"
-              >
-                <div className="flex items-center gap-3.5">
-                  <Star size={20} className="text-[#556885]" strokeWidth={1.8} />
-                  <span>Best Sellers</span>
-                </div>
-              </Link>
             </nav>
           </div>
 
@@ -467,7 +470,7 @@ export const HeroSection: React.FC = () => {
                         </p>
                       )}
 
-                      {/* Animated Roll-Down Button with Requested Alternating Colors */}
+                      {/* Animated Roll-Down Button */}
                       <div className="mt-1">
                         <SlideDownButton
                           to={banner.link}
