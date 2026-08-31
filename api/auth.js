@@ -1,8 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { query } from '../lib/db.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'kidsparadise_secret_jwt_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'kidsparadise_jwt_secret_key_2026';
 
 export function verifyToken(req) {
   const authHeader = req.headers['authorization'];
@@ -26,8 +27,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
     try {
-      const existing = await query('SELECT id FROM users WHERE email = ?', [email]);
+      const existing = await query('SELECT id FROM users WHERE LOWER(email) = ?', [cleanEmail]);
       if (existing.length > 0) {
         return res.status(400).json({ error: 'An account with this email already exists' });
       }
@@ -35,12 +38,12 @@ export default async function handler(req, res) {
       const passwordHash = await bcrypt.hash(password, 10);
       const result = await query(
         'INSERT INTO users (email, password_hash, full_name, role) VALUES (?, ?, ?, ?)',
-        [email, passwordHash, fullName || 'Customer', 'customer']
+        [cleanEmail, passwordHash, fullName || 'Customer', 'customer']
       );
 
       const user = {
         id: result.insertId,
-        email,
+        email: cleanEmail,
         full_name: fullName || 'Customer',
         role: 'customer'
       };
@@ -60,16 +63,54 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
     try {
-      const users = await query('SELECT id, email, password_hash, full_name, role FROM users WHERE email = ?', [email]);
+      const users = await query('SELECT id, email, password_hash, full_name, role FROM users WHERE LOWER(email) = ?', [cleanEmail]);
       if (users.length === 0) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
       const userRow = users[0];
-      const match = await bcrypt.compare(password, userRow.password_hash);
+      let match = false;
+      let shouldRehash = false;
+
+      // 1. Try standard bcrypt comparison
+      if (userRow.password_hash && (userRow.password_hash.startsWith('$2a$') || userRow.password_hash.startsWith('$2b$') || userRow.password_hash.startsWith('$2y$'))) {
+        try {
+          match = await bcrypt.compare(password, userRow.password_hash);
+        } catch (e) {
+          match = false;
+        }
+      }
+
+      // 2. Try plain-text comparison (if entered directly in database)
+      if (!match && userRow.password_hash && userRow.password_hash.trim() === password.trim()) {
+        match = true;
+        shouldRehash = true;
+      }
+
+      // 3. Try MD5 hash comparison
+      if (!match && userRow.password_hash) {
+        const md5Hash = crypto.createHash('md5').update(password).digest('hex');
+        if (userRow.password_hash.toLowerCase() === md5Hash.toLowerCase()) {
+          match = true;
+          shouldRehash = true;
+        }
+      }
+
       if (!match) {
         return res.status(401).json({ error: 'Invalid email or password' });
+      }
+
+      // Automatically upgrade plain-text / MD5 passwords to secure bcrypt
+      if (shouldRehash) {
+        try {
+          const newHash = await bcrypt.hash(password, 10);
+          await query('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, userRow.id]);
+        } catch (e) {
+          console.warn('Could not auto-upgrade password hash:', e.message);
+        }
       }
 
       const user = {
