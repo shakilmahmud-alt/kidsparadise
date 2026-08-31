@@ -5,6 +5,98 @@
       "destination": "/api/sitemap"
     },
     {
+      "source": "/api/auth/:match*",
+      "destination": "/api/auth"
+    },
+    {
+      "source": "/api/auth",
+      "destination": "/api/auth"
+    },
+    {
+      "source": "/api/store-data",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/products/:match*",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/products",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/categories/:match*",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/categories",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/brands/:match*",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/brands",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/orders/:match*",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/orders",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/coupons/:match*",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/coupons",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/settings/:match*",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/settings",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/reviews/:match*",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/reviews",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/addresses/:match*",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/addresses",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/wishlist/:match*",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/wishlist",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/pages/:match*",
+      "destination": "/api/store"
+    },
+    {
+      "source": "/api/pages",
+      "destination": "/api/store"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },

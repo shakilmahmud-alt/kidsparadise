@@ -16,7 +16,8 @@ export function verifyToken(req) {
 }
 
 export default async function handler(req, res) {
-  const action = req.query?.action || req.path?.split('/').pop();
+  const path = req.path || (req.url ? req.url.split('?')[0] : '') || '';
+  const action = req.query?.action || path.split('/').pop();
 
   // POST /api/auth/register
   if (req.method === 'POST' && action === 'register') {

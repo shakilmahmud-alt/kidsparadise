@@ -87,7 +87,7 @@ app.get('/api/sitemap', vercelWrapper(sitemapHandler));
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // 6. SPA fallback for client-side routing
-app.get('*', (req, res) => {
+app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 

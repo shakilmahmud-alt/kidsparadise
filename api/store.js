@@ -14,7 +14,7 @@ function safeJson(val, defaultVal = null) {
 
 export default async function handler(req, res) {
   const user = verifyToken(req);
-  const path = req.path || '';
+  const path = req.path || (req.url ? req.url.split('?')[0] : '') || '';
   const method = req.method;
 
   try {
