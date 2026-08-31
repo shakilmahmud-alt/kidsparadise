@@ -18,15 +18,14 @@ import {
   Search,
   ArrowRight,
   Menu,
-  Package,
+  ShoppingBag,
   Tv,
-  Gamepad2,
-  Watch,
   Smartphone,
   Laptop,
-  ShoppingBag,
+  Watch,
+  Rocket,
   Star,
-  Rocket
+  Award
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Category } from '../types';
@@ -51,10 +50,9 @@ const buildCategoryTree = (categories: Category[], parentId: string | null = nul
     }));
 };
 
-// Icons matched to Wokiee theme aesthetic (Image 3)
 const getCategoryIcon = (name: string, index: number) => {
   const lower = name.toLowerCase();
-  if (lower.includes('toy') || lower.includes('lego')) return <Gamepad2 size={20} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('toy') || lower.includes('lego')) return <Sparkles size={20} className="text-[#556885]" strokeWidth={1.8} />;
   if (lower.includes('vehicle') || lower.includes('car') || lower.includes('bike')) return <Car size={20} className="text-[#556885]" strokeWidth={1.8} />;
   if (lower.includes('doll')) return <Smile size={20} className="text-[#556885]" strokeWidth={1.8} />;
   if (lower.includes('care') || lower.includes('hygiene') || lower.includes('bath') || lower.includes('skin')) return <ShieldCheck size={20} className="text-[#556885]" strokeWidth={1.8} />;
@@ -65,13 +63,38 @@ const getCategoryIcon = (name: string, index: number) => {
   if (lower.includes('furniture') || lower.includes('bed')) return <Layers size={20} className="text-[#556885]" strokeWidth={1.8} />;
   
   const fallbackIcons = [
-    <ShoppingBag size={20} className="text-[#556885]" strokeWidth={1.8} />,
-    <Tv size={20} className="text-[#556885]" strokeWidth={1.8} />,
-    <Smartphone size={20} className="text-[#556885]" strokeWidth={1.8} />,
-    <Laptop size={20} className="text-[#556885]" strokeWidth={1.8} />,
-    <Watch size={20} className="text-[#556885]" strokeWidth={1.8} />
+    <ShoppingBag key="sb" size={20} className="text-[#556885]" strokeWidth={1.8} />,
+    <Tv key="tv" size={20} className="text-[#556885]" strokeWidth={1.8} />,
+    <Smartphone key="sm" size={20} className="text-[#556885]" strokeWidth={1.8} />,
+    <Laptop key="lp" size={20} className="text-[#556885]" strokeWidth={1.8} />,
+    <Watch key="wt" size={20} className="text-[#556885]" strokeWidth={1.8} />
   ];
   return fallbackIcons[index % fallbackIcons.length];
+};
+
+// Roll-Down Text Animation Button (User Requested)
+const SlideDownButton: React.FC<{
+  to: string;
+  text: string;
+  bgClass: string;
+}> = ({ to, text, bgClass }) => {
+  return (
+    <Link
+      to={to}
+      className={`group/btn relative inline-flex items-center justify-center px-7 py-3.5 rounded-md font-bold text-xs uppercase tracking-wider text-white shadow-lg transition-colors duration-300 overflow-hidden ${bgClass} hover:bg-black active:scale-95`}
+    >
+      <div className="relative overflow-hidden h-[16px] flex flex-col justify-center">
+        {/* 1st Text that slides down on hover */}
+        <span className="inline-block transition-transform duration-300 ease-[cubic-bezier(0.2,1,0.3,1)] group-hover/btn:translate-y-full">
+          {text}
+        </span>
+        {/* 2nd Text that rolls down from top into place on hover */}
+        <span className="absolute inset-0 inline-block -translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.2,1,0.3,1)] group-hover/btn:translate-y-0">
+          {text}
+        </span>
+      </div>
+    </Link>
+  );
 };
 
 export const HeroSection: React.FC = () => {
@@ -90,76 +113,70 @@ export const HeroSection: React.FC = () => {
     return categoryTree.slice(0, 9);
   }, [categoryTree]);
 
-  // Crystal Clear, High-Impact Banners with exact Wokiee layout
+  // Crystal Clear Banners with specific Button Colors and NO discount % badges
   const heroBanners = useMemo(() => [
     {
       id: 1,
-      badge: '-20%',
+      badgeText: 'HOT',
       badgeColor: 'bg-[#FFE600] text-black',
-      tag: 'Premium coffee machines with',
-      discountSub: 'UP TO 20% OFF',
-      title: 'Your Daily Coffee Upgrade',
-      btnText: 'Shop Coffee Machines',
-      btnColor: 'bg-white text-gray-900 hover:bg-gray-100',
+      tag: 'Premium Strollers & Prams',
+      subtitle: 'Smooth Suspension & Certified Safety',
+      title: "Your Baby's Dream Ride",
+      btnText: 'Shop Strollers',
+      btnBg: 'bg-[#F0264C]', // Main brand color
       link: '/category/gear-travel',
-      textColor: 'text-white',
       image: 'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=800&q=95',
       bgColor: 'bg-[#c85a32]'
     },
     {
       id: 2,
-      badge: null,
-      badgeColor: '',
-      tag: null,
-      discountSub: null,
-      title: 'Smart TVs for Smart Living',
-      subDesc: 'Stunning 4K quality. Endless streaming. Total control.',
-      btnText: 'Explore Collection',
-      btnColor: 'bg-[#0072CE] text-white hover:bg-[#005ba3]',
+      badgeText: 'NEW',
+      badgeColor: 'bg-[#0072CE] text-white',
+      tag: 'Electric Ride-on Supercars',
+      subtitle: 'Wireless Remote, LED Lights & Music',
+      title: 'Smart Cars for Smart Kids',
+      btnText: 'Explore Cars',
+      btnBg: 'bg-[#B81432]', // Deep version of #F0264C
       link: '/category/vehicles',
-      textColor: 'text-white',
       image: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=800&q=95',
       bgColor: 'bg-[#5b6574]'
     },
     {
       id: 3,
-      badge: '-20%',
-      badgeColor: 'bg-[#00A3E0] text-white',
-      tag: 'Upgrade your kitchen with seamless built-in design',
-      discountSub: null,
-      title: '20% Off Built-In Refrigerators',
-      btnText: 'Shop Now!',
-      btnColor: 'bg-[#00A3E0] text-white hover:bg-[#008cc0]',
+      badgeText: 'POPULAR',
+      badgeColor: 'bg-[#F0264C] text-white',
+      tag: 'Super Soft Plushies & Dolls',
+      subtitle: '100% Non-Toxic Organic Cotton',
+      title: 'Cuddle & Play Friends',
+      btnText: 'Explore Dolls',
+      btnBg: 'bg-[#F0264C]',
       link: '/category/dolls-accessories',
-      textColor: 'text-white',
       image: 'https://images.unsplash.com/photo-1558877385-81a1c7e67d72?auto=format&fit=crop&w=800&q=95',
       bgColor: 'bg-[#4a5568]'
     },
     {
       id: 4,
-      badge: '-15%',
+      badgeText: 'PREMIUM',
       badgeColor: 'bg-[#FFE600] text-black',
-      tag: 'Enjoy 15% OFF efficient and quiet washing machines',
-      discountSub: null,
-      title: 'Laundry Made Easy',
-      btnText: 'Shop Washers!',
-      btnColor: 'bg-white text-gray-900 hover:bg-gray-100',
+      tag: 'Newborn Feeding Essentials',
+      subtitle: 'BPA-Free Bottles & Mother Care Picks',
+      title: 'Baby Care Made Easy',
+      btnText: 'Shop Baby Care',
+      btnBg: 'bg-[#B81432]', // Deep version of #F0264C
       link: '/category/feeding-nursing',
-      textColor: 'text-white',
       image: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=800&q=95',
       bgColor: 'bg-[#0066cc]'
     },
     {
       id: 5,
-      badge: '-35%',
-      badgeColor: 'bg-[#E65100] text-white',
-      tag: 'Stylish toasters with fast, even toasting',
-      discountSub: null,
-      title: 'Hurry! Save 35% Today',
-      btnText: 'Shop Toasters!',
-      btnColor: 'bg-white text-gray-900 hover:bg-gray-100',
+      badgeText: 'BEST VALUE',
+      badgeColor: 'bg-emerald-500 text-white',
+      tag: 'Early Learning STEM Sets',
+      subtitle: 'Inspire Creativity & Brain Development',
+      title: 'Smart Learning Blocks',
+      btnText: 'Explore Blocks',
+      btnBg: 'bg-[#F0264C]',
       link: '/category/blocks',
-      textColor: 'text-white',
       image: 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?auto=format&fit=crop&w=800&q=95',
       bgColor: 'bg-[#4b5563]'
     }
@@ -211,7 +228,7 @@ export const HeroSection: React.FC = () => {
             <Menu size={22} className="text-white" strokeWidth={2.5} />
           </div>
 
-          {/* Search Bar matching Wokiee aesthetic */}
+          {/* Search Bar matching Wokiee clean aesthetic */}
           <div className="flex-1 relative">
             <form onSubmit={handleSearchSubmit} className="flex items-center w-full h-[52px] bg-[#f0f2f5] rounded-md border border-gray-200/90 overflow-hidden focus-within:border-gray-400 focus-within:bg-white transition-all">
               <input
@@ -273,15 +290,15 @@ export const HeroSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Body: Shop by Category Sidebar on Left + 423x535 Slider on Right */}
+        {/* Hero Body: Unified Layout where Cards Slide UNDER the "Shop by" Menu */}
         <div 
-          className="relative flex gap-4 items-start"
+          className="relative min-h-[545px] overflow-hidden"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
 
-          {/* 1. Left Side: "Shop by" Menu (Image 3 Style with #556885 outline icons and clean dividers) */}
-          <div className="hidden lg:block w-[270px] min-w-[270px] bg-white rounded-b-md border border-gray-200 shadow-sm z-30 flex-shrink-0 relative">
+          {/* 1. Left Side: "Shop by" Menu with z-30 (Cards slide behind/under it) */}
+          <div className="hidden lg:block absolute left-0 top-0 w-[270px] min-w-[270px] bg-white rounded-b-md border border-gray-200 shadow-md z-30">
             <nav className="divide-y divide-gray-100">
               {displayCategories.map((cat, idx) => {
                 const hasChildren = cat.children && cat.children.length > 0;
@@ -327,7 +344,7 @@ export const HeroSection: React.FC = () => {
                     {/* Flyout MegaMenu on Hover */}
                     {hasChildren && isHovered && (
                       <div 
-                        className="absolute left-full top-0 ml-1.5 w-[540px] bg-white border border-gray-200 rounded-lg shadow-2xl p-6 z-50 animate-in fade-in duration-150 min-h-[380px]"
+                        className="absolute left-full top-0 ml-1 w-[540px] bg-white border border-gray-200 rounded-lg shadow-2xl p-6 z-50 animate-in fade-in duration-150 min-h-[380px]"
                         onMouseEnter={() => setActiveCategory(cat)}
                         onMouseLeave={() => setActiveCategory(null)}
                       >
@@ -378,7 +395,7 @@ export const HeroSection: React.FC = () => {
                 );
               })}
 
-              {/* New Arrivals & Best Sellers with clean Wokiee icons */}
+              {/* New Arrivals & Best Sellers */}
               <Link
                 to="/products?filter=new"
                 className="flex items-center justify-between px-4 py-3.5 text-[14px] font-semibold text-[#1d293f] hover:text-[#0072CE] hover:bg-gray-50 transition-colors"
@@ -400,40 +417,38 @@ export const HeroSection: React.FC = () => {
             </nav>
           </div>
 
-          {/* 2. Right Side: Banner Slider (Exact Dimensions: 423px width x 535px height, Crystal Clear Photography) */}
-          <div className="flex-1 overflow-hidden relative">
-            
-            {/* Sliding Track: translates by (423px + 16px gap) = 439px per slide */}
+          {/* 2. Sliding Track: Starts at pl-[286px] and slides UNDER the menu when currentSlide > 0 */}
+          <div className="w-full lg:pl-[286px] overflow-visible">
             <div 
-              className="flex transition-transform duration-700 ease-in-out gap-4"
+              className="flex transition-transform duration-700 ease-in-out gap-4 z-10"
               style={{
                 transform: `translateX(-${currentSlide * 439}px)`
               }}
             >
-              {heroBanners.concat(heroBanners).map((banner, index) => (
+              {heroBanners.concat(heroBanners).concat(heroBanners).map((banner, index) => (
                 <div
                   key={`${banner.id}-${index}`}
                   className="w-[423px] min-w-[423px] max-w-[423px] h-[535px] flex-shrink-0"
                 >
                   <div className={`relative w-full h-full rounded-[20px] overflow-hidden shadow-sm group select-none ${banner.bgColor}`}>
                     
-                    {/* CRYSTAL CLEAR Background Image (NO dark overlay, clean & vibrant) */}
+                    {/* CRYSTAL CLEAR Background Image */}
                     <img
                       src={banner.image}
                       alt={banner.title}
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 pointer-events-none"
                     />
 
-                    {/* Round Sticker Badge (Top / Middle Right like Image 2) */}
-                    {banner.badge && (
+                    {/* Feature Badge (Top Right) */}
+                    {banner.badgeText && (
                       <div className="absolute top-7 right-7 z-20">
-                        <div className={`w-[90px] h-[90px] rounded-full flex items-center justify-center font-black text-[32px] shadow-2xl tracking-tighter ${banner.badgeColor}`}>
-                          {banner.badge}
+                        <div className={`px-4 py-2 rounded-full flex items-center justify-center font-black text-xs uppercase tracking-widest shadow-xl ${banner.badgeColor}`}>
+                          {banner.badgeText}
                         </div>
                       </div>
                     )}
 
-                    {/* Card Content & Text placed cleanly at the bottom */}
+                    {/* Card Content with Roll-Down Button */}
                     <div className="absolute inset-x-0 bottom-0 p-8 flex flex-col justify-end text-white z-10 bg-gradient-to-t from-black/75 via-black/25 to-transparent pt-24">
                       
                       {banner.tag && (
@@ -442,29 +457,23 @@ export const HeroSection: React.FC = () => {
                         </p>
                       )}
 
-                      {banner.discountSub && (
-                        <p className="text-xs font-black uppercase tracking-wider text-amber-300 drop-shadow-md mb-1.5">
-                          {banner.discountSub}
-                        </p>
-                      )}
-
-                      <h3 className="text-[28px] font-black leading-[1.15] tracking-tight mb-3 text-white drop-shadow-lg">
+                      <h3 className="text-[28px] font-black leading-[1.15] tracking-tight mb-2 text-white drop-shadow-lg">
                         {banner.title}
                       </h3>
 
-                      {banner.subDesc && (
-                        <p className="text-[13px] text-gray-200 line-clamp-2 mb-4 leading-relaxed drop-shadow-md">
-                          {banner.subDesc}
+                      {banner.subtitle && (
+                        <p className="text-[13px] text-gray-200 line-clamp-2 mb-5 leading-relaxed drop-shadow-md">
+                          {banner.subtitle}
                         </p>
                       )}
 
-                      <div className="mt-2">
-                        <Link
+                      {/* Animated Roll-Down Button with Requested Alternating Colors */}
+                      <div className="mt-1">
+                        <SlideDownButton
                           to={banner.link}
-                          className={`inline-block px-6 py-3.5 rounded-md font-extrabold text-[13px] tracking-tight shadow-lg active:scale-95 transition-all duration-200 ${banner.btnColor}`}
-                        >
-                          {banner.btnText}
-                        </Link>
+                          text={banner.btnText}
+                          bgClass={banner.btnBg}
+                        />
                       </div>
 
                     </div>
@@ -473,44 +482,43 @@ export const HeroSection: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
 
-            {/* Slider Bottom Controls: Left/Right Arrow Buttons + Dot Indicators (Image 2 & 3) */}
-            <div className="flex items-center justify-between mt-4 px-1">
-              
-              {/* Pagination Dots */}
-              <div className="flex items-center gap-2">
-                {heroBanners.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentSlide(idx)}
-                    className={`h-2.5 rounded-full transition-all duration-300 ${
-                      currentSlide % totalBanners === idx
-                        ? 'w-7 bg-[#F0264C]'
-                        : 'w-2.5 bg-gray-300 hover:bg-gray-400'
-                    }`}
-                    title={`Slide ${idx + 1}`}
-                  />
-                ))}
-              </div>
-
-              {/* Prev / Next Circular Arrow Buttons */}
-              <div className="flex items-center gap-2">
+          {/* 3. Slider Bottom Controls: Left/Right Arrow Buttons + Dot Indicators */}
+          <div className="flex items-center justify-between mt-4 px-1 lg:pl-[286px]">
+            
+            {/* Pagination Dots */}
+            <div className="flex items-center gap-2">
+              {heroBanners.map((_, idx) => (
                 <button
-                  onClick={prevSlide}
-                  className="w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-700 hover:bg-[#F0264C] hover:text-white hover:border-[#F0264C] transition-all active:scale-95"
-                  title="Previous Slide"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <button
-                  onClick={nextSlide}
-                  className="w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-700 hover:bg-[#F0264C] hover:text-white hover:border-[#F0264C] transition-all active:scale-95"
-                  title="Next Slide"
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
+                  key={idx}
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`h-2.5 rounded-full transition-all duration-300 ${
+                    currentSlide % totalBanners === idx
+                      ? 'w-7 bg-[#F0264C]'
+                      : 'w-2.5 bg-gray-300 hover:bg-gray-400'
+                  }`}
+                  title={`Slide ${idx + 1}`}
+                />
+              ))}
+            </div>
 
+            {/* Prev / Next Circular Arrow Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={prevSlide}
+                className="w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-700 hover:bg-[#F0264C] hover:text-white hover:border-[#F0264C] transition-all active:scale-95"
+                title="Previous Slide"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                onClick={nextSlide}
+                className="w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-700 hover:bg-[#F0264C] hover:text-white hover:border-[#F0264C] transition-all active:scale-95"
+                title="Next Slide"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
 
           </div>
