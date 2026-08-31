@@ -6,6 +6,7 @@ gsap.registerPlugin(ScrollTrigger);
 import { Link } from 'react-router-dom';
 import { ArrowRight, Truck, Headphones, ShieldCheck, Award } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
+import HeroSection from '../components/HeroSection';
 import { useStore } from '../context/StoreContext';
 import { HomeSection, Product, Brand } from '../types';
 
@@ -811,71 +812,7 @@ const Home: React.FC = () => {
     <div className="w-full bg-white pb-20">
 
       {/* Hero Section */}
-      <section className="relative w-full h-[500px] md:h-[700px] overflow-hidden mb-6 md:mb-12">
-        {/* Background Video */}
-        <div className="absolute inset-0 z-0 bg-black">
-          <video 
-            autoPlay 
-            loop 
-            muted 
-            playsInline 
-            className="w-full h-full object-cover opacity-70"
-          >
-            <source src="https://ik.imagekit.io/vrtbi4wsn/Videos/Zerobaby-home-video.mp4" type="video/mp4" />
-          </video>
-          {/* Fading gradient to blend with the white background of the page at the bottom and darken top for text */}
-          <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/40"></div>
-        </div>
-
-        {/* Content Overlay */}
-        <div className="container mx-auto px-4 md:px-8 h-full relative z-10 flex flex-col justify-center items-start">
-          <style dangerouslySetInnerHTML={{ __html: `
-            @keyframes slideFadeUp {
-              0% { opacity: 0; transform: translateY(30px); }
-              100% { opacity: 1; transform: translateY(0); }
-            }
-            .anim-slide-fade-up { animation: slideFadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-            @keyframes zoomIn {
-              0% { opacity: 0; transform: scale(0.8); }
-              100% { opacity: 1; transform: scale(1); }
-            }
-            .anim-zoom-in { animation: zoomIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-            @keyframes flipInX {
-              0% { opacity: 0; transform: perspective(400px) rotateX(90deg); }
-              100% { opacity: 1; transform: perspective(400px) rotateX(0deg); }
-            }
-            .anim-flip-in-x { animation: flipInX 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-            @keyframes fadeInRight {
-              0% { opacity: 0; transform: translateX(40px); }
-              100% { opacity: 1; transform: translateX(0); }
-            }
-            .anim-fade-in-right { animation: fadeInRight 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-            @keyframes blurIn {
-              0% { opacity: 0; filter: blur(10px); transform: scale(1.05); }
-              100% { opacity: 1; filter: blur(0); transform: scale(1); }
-            }
-            .anim-blur-in { animation: blurIn 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-          `}} />
-          <div key={currentVideoSlide} className={`max-w-2xl text-white mt-12 md:mt-24 ${currentAnim}`}>
-            <h2 className="text-4xl md:text-7xl font-black leading-tight mb-4 drop-shadow-2xl text-white">
-              {videoSlides[currentVideoSlide].title}
-            </h2>
-            <p className="text-sm md:text-xl mb-8 font-semibold text-white/95 drop-shadow-xl max-w-lg">
-              {videoSlides[currentVideoSlide].desc}
-            </p>
-            <Link 
-              to={videoSlides[currentVideoSlide].link} 
-              className="inline-block bg-[#e92c5d] hover:bg-[#c81d4a] text-white px-8 py-3.5 md:px-10 md:py-4 rounded-full font-black transition-all shadow-[0_4px_15px_rgba(233,44,93,0.4)] hover:shadow-[0_6px_20px_rgba(233,44,93,0.6)] uppercase tracking-widest text-xs md:text-sm"
-            >
-              Shop Now ➝
-            </Link>
-          </div>
-        </div>
-      </section>
+      <HeroSection />
 
       {/* Features Bar */}
       <section className="features-container container mx-auto px-4 md:px-8 mb-6 md:mb-12">
