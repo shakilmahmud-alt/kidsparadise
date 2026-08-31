@@ -41,13 +41,23 @@ const Login: React.FC = () => {
 
     try {
       if (isLogin) {
-        await api.auth.login(formData.email, formData.password);
+        const res = await api.auth.login(formData.email, formData.password);
+        await refreshAllData();
+        if (res.user?.role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/my-account', { replace: true });
+        }
       } else {
-        await api.auth.register(formData.email, formData.password, formData.fullName);
+        const res = await api.auth.register(formData.email, formData.password, formData.fullName);
         alert("Registration successful! Welcome to KidsParadise.");
+        await refreshAllData();
+        if (res.user?.role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/my-account', { replace: true });
+        }
       }
-      await refreshAllData();
-      navigate('/');
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
     } finally {

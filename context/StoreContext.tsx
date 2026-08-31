@@ -122,8 +122,18 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   ]);
 
   const [wishlist, setWishlist] = useState<string[]>([]);
-  const [user, setUser] = useState<any | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<any | null>(() => getStoredUser());
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
+    const u = getStoredUser();
+    if (!u) return null;
+    return {
+      id: String(u.id),
+      email: u.email,
+      role: u.role || 'customer',
+      full_name: u.full_name || '',
+      created_at: u.created_at || new Date().toISOString()
+    };
+  });
   const [shippingSettings, setShippingSettings] = useState<ShippingSettings>({ insideDhaka: 60, outsideDhaka: 120 });
   const [storeInfo, setStoreInfo] = useState<StoreInfo>({
     name: 'KidsParadise',
@@ -152,7 +162,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+    const u = getStoredUser();
+    return u?.role === 'admin';
+  });
   const [adminTab, setAdminTab] = useState<AdminTab>('orders');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -504,7 +517,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setAddresses([]);
         setWishlist([]);
       },
-      refreshAllData: () => fetchData(),
+      refreshAllData: async () => {
+        await Promise.all([fetchData(), fetchUserData()]);
+      },
       searchQuery,
       setSearchQuery
     }}>
