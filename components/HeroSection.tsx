@@ -17,8 +17,16 @@ import {
   Flame, 
   Search,
   ArrowRight,
-  SlidersHorizontal,
-  Package
+  Menu,
+  Package,
+  Tv,
+  Gamepad2,
+  Watch,
+  Smartphone,
+  Laptop,
+  ShoppingBag,
+  Star,
+  Rocket
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Category } from '../types';
@@ -43,18 +51,27 @@ const buildCategoryTree = (categories: Category[], parentId: string | null = nul
     }));
 };
 
-const getCategoryIcon = (name: string) => {
+// Icons matched to Wokiee theme aesthetic (Image 3)
+const getCategoryIcon = (name: string, index: number) => {
   const lower = name.toLowerCase();
-  if (lower.includes('toy') || lower.includes('lego')) return <Sparkles size={17} className="text-[#F0264C]" />;
-  if (lower.includes('vehicle') || lower.includes('car') || lower.includes('bike')) return <Car size={17} className="text-blue-500" />;
-  if (lower.includes('doll')) return <Smile size={17} className="text-pink-500" />;
-  if (lower.includes('care') || lower.includes('hygiene') || lower.includes('bath') || lower.includes('skin')) return <ShieldCheck size={17} className="text-emerald-500" />;
-  if (lower.includes('feed') || lower.includes('bottle') || lower.includes('food')) return <Heart size={17} className="text-rose-400" />;
-  if (lower.includes('gear') || lower.includes('travel') || lower.includes('stroller')) return <Truck size={17} className="text-amber-500" />;
-  if (lower.includes('block') || lower.includes('puzzle')) return <Box size={17} className="text-indigo-500" />;
-  if (lower.includes('fashion') || lower.includes('cloth') || lower.includes('apparel') || lower.includes('shoe')) return <Shirt size={17} className="text-purple-500" />;
-  if (lower.includes('furniture') || lower.includes('bed')) return <Layers size={17} className="text-teal-500" />;
-  return <Package size={17} className="text-gray-400" />;
+  if (lower.includes('toy') || lower.includes('lego')) return <Gamepad2 size={20} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('vehicle') || lower.includes('car') || lower.includes('bike')) return <Car size={20} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('doll')) return <Smile size={20} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('care') || lower.includes('hygiene') || lower.includes('bath') || lower.includes('skin')) return <ShieldCheck size={20} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('feed') || lower.includes('bottle') || lower.includes('food')) return <ShoppingBag size={20} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('gear') || lower.includes('travel') || lower.includes('stroller')) return <Truck size={20} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('block') || lower.includes('puzzle')) return <Box size={20} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('fashion') || lower.includes('cloth') || lower.includes('apparel') || lower.includes('shoe')) return <Shirt size={20} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('furniture') || lower.includes('bed')) return <Layers size={20} className="text-[#556885]" strokeWidth={1.8} />;
+  
+  const fallbackIcons = [
+    <ShoppingBag size={20} className="text-[#556885]" strokeWidth={1.8} />,
+    <Tv size={20} className="text-[#556885]" strokeWidth={1.8} />,
+    <Smartphone size={20} className="text-[#556885]" strokeWidth={1.8} />,
+    <Laptop size={20} className="text-[#556885]" strokeWidth={1.8} />,
+    <Watch size={20} className="text-[#556885]" strokeWidth={1.8} />
+  ];
+  return fallbackIcons[index % fallbackIcons.length];
 };
 
 export const HeroSection: React.FC = () => {
@@ -64,7 +81,6 @@ export const HeroSection: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const categoryTree = useMemo(() => {
     return buildCategoryTree(categories);
@@ -74,77 +90,78 @@ export const HeroSection: React.FC = () => {
     return categoryTree.slice(0, 9);
   }, [categoryTree]);
 
-  // Kids Paradise Curated Product Banners
+  // Crystal Clear, High-Impact Banners with exact Wokiee layout
   const heroBanners = useMemo(() => [
     {
       id: 1,
       badge: '-20%',
-      badgeColor: 'bg-amber-400 text-black',
-      tag: 'Premium Strollers with',
+      badgeColor: 'bg-[#FFE600] text-black',
+      tag: 'Premium coffee machines with',
       discountSub: 'UP TO 20% OFF',
-      title: "Your Daily Stroller Upgrade",
-      desc: 'Foldable, ultra-safe & smooth suspension for comfortable baby walks.',
-      btnText: 'Shop Strollers',
-      btnColor: 'bg-white text-black hover:bg-gray-100',
+      title: 'Your Daily Coffee Upgrade',
+      btnText: 'Shop Coffee Machines',
+      btnColor: 'bg-white text-gray-900 hover:bg-gray-100',
       link: '/category/gear-travel',
-      bgGradient: 'from-[#b43a18] via-[#e25822] to-[#f27a3a]',
-      image: 'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=900&q=80',
+      textColor: 'text-white',
+      image: 'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=800&q=95',
+      bgColor: 'bg-[#c85a32]'
     },
     {
       id: 2,
-      badge: '-15%',
-      badgeColor: 'bg-amber-400 text-black',
-      tag: 'Super Soft Plushies & Dolls',
-      discountSub: 'BEST VALUE PICK',
-      title: 'Cuddle & Play Friends',
-      desc: 'Non-toxic organic cotton dolls & giant teddy bears for gentle hugs.',
-      btnText: 'Explore Dolls',
-      btnColor: 'bg-white text-black hover:bg-gray-100',
-      link: '/category/dolls-accessories',
-      bgGradient: 'from-[#005c97] via-[#0072CE] to-[#363795]',
-      image: 'https://images.unsplash.com/photo-1558877385-81a1c7e67d72?auto=format&fit=crop&w=900&q=80',
+      badge: null,
+      badgeColor: '',
+      tag: null,
+      discountSub: null,
+      title: 'Smart TVs for Smart Living',
+      subDesc: 'Stunning 4K quality. Endless streaming. Total control.',
+      btnText: 'Explore Collection',
+      btnColor: 'bg-[#0072CE] text-white hover:bg-[#005ba3]',
+      link: '/category/vehicles',
+      textColor: 'text-white',
+      image: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=800&q=95',
+      bgColor: 'bg-[#5b6574]'
     },
     {
       id: 3,
-      badge: '-35%',
-      badgeColor: 'bg-[#F0264C] text-white',
-      tag: 'Electric Ride-on Supercars',
-      discountSub: 'HURRY! SAVE 35% TODAY',
-      title: 'Real Electric Supercars',
-      desc: 'Parental wireless remote control, bright LED lights & music player.',
-      btnText: 'Shop Ride-Ons',
-      btnColor: 'bg-white text-black hover:bg-gray-100',
-      link: '/category/vehicles',
-      bgGradient: 'from-[#2c3e50] via-[#3a536b] to-[#4a6984]',
-      image: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=900&q=80',
+      badge: '-20%',
+      badgeColor: 'bg-[#00A3E0] text-white',
+      tag: 'Upgrade your kitchen with seamless built-in design',
+      discountSub: null,
+      title: '20% Off Built-In Refrigerators',
+      btnText: 'Shop Now!',
+      btnColor: 'bg-[#00A3E0] text-white hover:bg-[#008cc0]',
+      link: '/category/dolls-accessories',
+      textColor: 'text-white',
+      image: 'https://images.unsplash.com/photo-1558877385-81a1c7e67d72?auto=format&fit=crop&w=800&q=95',
+      bgColor: 'bg-[#4a5568]'
     },
     {
       id: 4,
-      badge: '-20%',
-      badgeColor: 'bg-amber-400 text-black',
-      tag: 'Newborn Feeding & Care',
-      discountSub: 'MOTHER CARE PICKS',
-      title: 'Gentle Feeding Made Easy',
-      desc: 'BPA-Free bottles, pacifiers, warmers & sterilizers for happy babies.',
-      btnText: 'Shop Baby Care',
-      btnColor: 'bg-[#0072CE] text-white hover:bg-[#005ba3]',
+      badge: '-15%',
+      badgeColor: 'bg-[#FFE600] text-black',
+      tag: 'Enjoy 15% OFF efficient and quiet washing machines',
+      discountSub: null,
+      title: 'Laundry Made Easy',
+      btnText: 'Shop Washers!',
+      btnColor: 'bg-white text-gray-900 hover:bg-gray-100',
       link: '/category/feeding-nursing',
-      bgGradient: 'from-[#0288d1] via-[#039be5] to-[#29b6f6]',
-      image: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=900&q=80',
+      textColor: 'text-white',
+      image: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=800&q=95',
+      bgColor: 'bg-[#0066cc]'
     },
     {
       id: 5,
-      badge: '-30%',
-      badgeColor: 'bg-yellow-300 text-black',
-      tag: 'Early Learning & STEM Blocks',
-      discountSub: 'BRAIN BOOSTER TOYS',
-      title: 'Build, Learn & Imagine',
-      desc: 'Building blocks, puzzles & creative sets that spark endless curiosity.',
-      btnText: 'Explore Blocks',
-      btnColor: 'bg-[#F0264C] text-white hover:bg-[#d61e41]',
+      badge: '-35%',
+      badgeColor: 'bg-[#E65100] text-white',
+      tag: 'Stylish toasters with fast, even toasting',
+      discountSub: null,
+      title: 'Hurry! Save 35% Today',
+      btnText: 'Shop Toasters!',
+      btnColor: 'bg-white text-gray-900 hover:bg-gray-100',
       link: '/category/blocks',
-      bgGradient: 'from-[#8e2de2] via-[#4a00e0] to-[#1f1c2c]',
-      image: 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?auto=format&fit=crop&w=900&q=80',
+      textColor: 'text-white',
+      image: 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?auto=format&fit=crop&w=800&q=95',
+      bgColor: 'bg-[#4b5563]'
     }
   ], []);
 
@@ -162,7 +179,7 @@ export const HeroSection: React.FC = () => {
     if (isPaused) return;
     const interval = setInterval(() => {
       nextSlide();
-    }, 4500);
+    }, 5000);
     return () => clearInterval(interval);
   }, [isPaused, totalBanners]);
 
@@ -182,24 +199,21 @@ export const HeroSection: React.FC = () => {
   };
 
   return (
-    <section className="w-full bg-[#f8f9fa] pt-4 pb-8 md:pb-12 font-sans border-b border-gray-100 overflow-hidden">
-      <div className="container mx-auto px-4 md:px-8 relative" ref={containerRef}>
+    <section className="w-full bg-[#f8f9fa] pt-4 pb-8 md:pb-12 font-sans overflow-hidden">
+      <div className="container mx-auto px-4 md:px-8">
 
-        {/* Top Row: "Shop by" Header + Large Clean Search Bar */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center mb-4">
+        {/* Top Header Row: "Shop by" Header + Large Search Input (Image 1 & 2) */}
+        <div className="flex flex-col lg:flex-row items-stretch gap-4 mb-4">
           
-          {/* "Shop by" Header */}
-          <div className="hidden lg:flex lg:col-span-3 items-center justify-between bg-[#0072CE] text-white px-5 py-3.5 rounded-t-xl font-bold tracking-wide shadow-sm">
-            <div className="flex items-center gap-3">
-              <SlidersHorizontal size={20} />
-              <span className="text-base uppercase font-extrabold tracking-wider">Shop by</span>
-            </div>
-            <div className="w-6 h-0.5 bg-white/40 rounded-full"></div>
+          {/* "Shop by" Header Box (#F0264C Background as requested) */}
+          <div className="hidden lg:flex w-[270px] min-w-[270px] items-center justify-between bg-[#F0264C] text-white px-5 py-3.5 rounded-t-md font-bold tracking-tight shadow-sm flex-shrink-0">
+            <span className="text-base font-bold tracking-wide">Shop by</span>
+            <Menu size={22} className="text-white" strokeWidth={2.5} />
           </div>
 
-          {/* Search Bar */}
-          <div className="col-span-1 lg:col-span-9 relative">
-            <form onSubmit={handleSearchSubmit} className="flex items-center w-full bg-white rounded-xl md:rounded-full border border-gray-200 shadow-sm overflow-hidden focus-within:border-[#F0264C] focus-within:ring-2 focus-within:ring-[#F0264C]/20 transition-all">
+          {/* Search Bar matching Wokiee aesthetic */}
+          <div className="flex-1 relative">
+            <form onSubmit={handleSearchSubmit} className="flex items-center w-full h-[52px] bg-[#f0f2f5] rounded-md border border-gray-200/90 overflow-hidden focus-within:border-gray-400 focus-within:bg-white transition-all">
               <input
                 type="text"
                 placeholder="Search"
@@ -209,27 +223,27 @@ export const HeroSection: React.FC = () => {
                   setShowSearchDropdown(true);
                 }}
                 onFocus={() => setShowSearchDropdown(true)}
-                className="w-full px-5 py-3.5 text-gray-700 text-sm outline-none placeholder-gray-400 bg-transparent"
+                className="w-full px-5 py-3 text-gray-800 text-sm outline-none placeholder-gray-500 bg-transparent"
               />
               <button
                 type="submit"
-                className="px-6 py-3.5 text-gray-500 hover:text-[#F0264C] transition-colors flex items-center justify-center cursor-pointer"
+                className="px-5 text-gray-500 hover:text-black transition-colors flex items-center justify-center cursor-pointer"
                 title="Search"
               >
-                <Search size={20} />
+                <Search size={18} strokeWidth={2.2} />
               </button>
             </form>
 
-            {/* Live Search Dropdown */}
+            {/* Live Search Results Dropdown */}
             {showSearchDropdown && searchResults.length > 0 && (
               <div 
-                className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-2xl mt-2 border border-gray-100 divide-y divide-gray-100 z-50 overflow-hidden max-h-[380px] overflow-y-auto"
+                className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-md mt-1 border border-gray-200 divide-y divide-gray-100 z-50 overflow-hidden max-h-[380px] overflow-y-auto"
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 {searchResults.map(product => (
                   <div 
                     key={product.id} 
-                    className="flex items-center gap-4 p-3.5 hover:bg-rose-50/50 transition-colors cursor-pointer group"
+                    className="flex items-center gap-4 p-3.5 hover:bg-gray-50 transition-colors cursor-pointer group"
                     onClick={() => {
                       setShowSearchDropdown(false);
                       navigate(`/product/${product.slug || product.id}`);
@@ -238,7 +252,7 @@ export const HeroSection: React.FC = () => {
                     <img 
                       src={product.images[0] || 'https://via.placeholder.com/80'} 
                       alt={product.name} 
-                      className="w-12 h-12 object-cover rounded-lg border border-gray-100 flex-shrink-0"
+                      className="w-12 h-12 object-cover rounded border border-gray-100 flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-semibold text-gray-800 truncate group-hover:text-[#F0264C] transition-colors">
@@ -259,15 +273,15 @@ export const HeroSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Body: Unified Viewport where Slider Slides UNDER the "Shop by" Menu */}
+        {/* Hero Body: Shop by Category Sidebar on Left + 423x535 Slider on Right */}
         <div 
-          className="relative min-h-[490px] md:min-h-[530px]"
+          className="relative flex gap-4 items-start"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
 
-          {/* 1. Left Side: Shop by Category Vertical Menu with High Z-Index & White Background */}
-          <div className="hidden lg:block absolute left-0 top-0 w-[270px] bg-white rounded-b-xl border border-gray-200/80 shadow-lg z-30">
+          {/* 1. Left Side: "Shop by" Menu (Image 3 Style with #556885 outline icons and clean dividers) */}
+          <div className="hidden lg:block w-[270px] min-w-[270px] bg-white rounded-b-md border border-gray-200 shadow-sm z-30 flex-shrink-0 relative">
             <nav className="divide-y divide-gray-100">
               {displayCategories.map((cat, idx) => {
                 const hasChildren = cat.children && cat.children.length > 0;
@@ -282,44 +296,44 @@ export const HeroSection: React.FC = () => {
                   >
                     <Link
                       to={`/category/${cat.slug || encodeURIComponent(cat.name)}`}
-                      className={`flex items-center justify-between px-5 py-3 text-sm font-medium transition-all ${
+                      className={`flex items-center justify-between px-4 py-3.5 text-[14px] transition-colors ${
                         isHovered 
-                          ? 'bg-rose-50/80 text-[#F0264C] font-semibold pl-6' 
-                          : 'text-gray-700 hover:text-[#F0264C] hover:bg-gray-50'
+                          ? 'text-[#0072CE] font-bold bg-blue-50/50' 
+                          : 'text-[#1d293f] font-semibold hover:text-[#0072CE]'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        {getCategoryIcon(cat.name)}
+                      <div className="flex items-center gap-3.5">
+                        {getCategoryIcon(cat.name, idx)}
                         <span className="truncate">{cat.name.replace(/&amp;/g, '&')}</span>
                       </div>
                       
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
                         {idx === 2 && (
-                          <span className="bg-[#F0264C] text-white text-[10px] uppercase font-bold px-1.5 py-0.5 rounded">
+                          <span className="bg-[#FF4D15] text-white text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded-[4px]">
                             Hot
                           </span>
                         )}
                         {idx === 0 && (
-                          <span className="bg-amber-400 text-black text-[10px] uppercase font-bold px-1.5 py-0.5 rounded">
+                          <span className="bg-[#FFCC00] text-black text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded-[4px]">
                             New
                           </span>
                         )}
                         {hasChildren && (
-                          <ChevronRight size={14} className={`transition-transform ${isHovered ? 'text-[#F0264C] translate-x-1' : 'text-gray-400'}`} />
+                          <ChevronRight size={15} className={`transition-transform text-gray-400 ${isHovered ? 'text-[#0072CE] translate-x-0.5' : ''}`} />
                         )}
                       </div>
                     </Link>
 
-                    {/* Multi-Level MegaMenu Flyout on Hover */}
+                    {/* Flyout MegaMenu on Hover */}
                     {hasChildren && isHovered && (
                       <div 
-                        className="absolute left-full top-0 ml-1.5 w-[560px] bg-white border border-gray-200 rounded-2xl shadow-2xl p-6 z-50 animate-in fade-in duration-200 min-h-[380px]"
+                        className="absolute left-full top-0 ml-1.5 w-[540px] bg-white border border-gray-200 rounded-lg shadow-2xl p-6 z-50 animate-in fade-in duration-150 min-h-[380px]"
                         onMouseEnter={() => setActiveCategory(cat)}
                         onMouseLeave={() => setActiveCategory(null)}
                       >
                         <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100">
-                          <h3 className="font-extrabold text-base text-gray-900 flex items-center gap-2">
-                            {getCategoryIcon(cat.name)}
+                          <h3 className="font-extrabold text-base text-[#1d293f] flex items-center gap-2">
+                            {getCategoryIcon(cat.name, idx)}
                             {cat.name.replace(/&amp;/g, '&')}
                           </h3>
                           <Link 
@@ -335,7 +349,7 @@ export const HeroSection: React.FC = () => {
                             <div key={subCat.id} className="space-y-2">
                               <Link
                                 to={`/category/${subCat.slug || encodeURIComponent(subCat.name)}`}
-                                className="font-bold text-sm text-gray-900 hover:text-[#F0264C] transition-colors block border-b border-gray-100 pb-1.5"
+                                className="font-bold text-sm text-[#1d293f] hover:text-[#0072CE] transition-colors block border-b border-gray-100 pb-1.5"
                               >
                                 {subCat.name.replace(/&amp;/g, '&')}
                               </Link>
@@ -346,7 +360,7 @@ export const HeroSection: React.FC = () => {
                                     <li key={subSubCat.id}>
                                       <Link
                                         to={`/category/${subSubCat.slug || encodeURIComponent(subSubCat.name)}`}
-                                        className="text-xs text-gray-600 hover:text-[#F0264C] transition-colors flex items-center gap-1.5"
+                                        className="text-xs text-gray-600 hover:text-[#0072CE] transition-colors flex items-center gap-1.5"
                                       >
                                         <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
                                         {subSubCat.name.replace(/&amp;/g, '&')}
@@ -364,126 +378,139 @@ export const HeroSection: React.FC = () => {
                 );
               })}
 
+              {/* New Arrivals & Best Sellers with clean Wokiee icons */}
               <Link
                 to="/products?filter=new"
-                className="flex items-center justify-between px-5 py-3 text-sm font-medium text-gray-700 hover:text-[#F0264C] hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between px-4 py-3.5 text-[14px] font-semibold text-[#1d293f] hover:text-[#0072CE] hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <Flame size={17} className="text-[#F0264C]" />
+                <div className="flex items-center gap-3.5">
+                  <Rocket size={20} className="text-[#556885]" strokeWidth={1.8} />
                   <span>New Arrivals</span>
                 </div>
               </Link>
               <Link
                 to="/products?filter=bestseller"
-                className="flex items-center justify-between px-5 py-3 text-sm font-medium text-gray-700 hover:text-[#F0264C] hover:bg-gray-50 transition-colors rounded-b-xl"
+                className="flex items-center justify-between px-4 py-3.5 text-[14px] font-semibold text-[#1d293f] hover:text-[#0072CE] hover:bg-gray-50 transition-colors rounded-b-md"
               >
-                <div className="flex items-center gap-3">
-                  <Zap size={17} className="text-amber-500" />
+                <div className="flex items-center gap-3.5">
+                  <Star size={20} className="text-[#556885]" strokeWidth={1.8} />
                   <span>Best Sellers</span>
                 </div>
               </Link>
             </nav>
           </div>
 
-          {/* 2. Sliding Carousel Track: Starts next to the menu (left: 286px on desktop) and slides UNDER the menu when currentSlide > 0 */}
-          <div className="w-full lg:pl-[286px] overflow-visible">
+          {/* 2. Right Side: Banner Slider (Exact Dimensions: 423px width x 535px height, Crystal Clear Photography) */}
+          <div className="flex-1 overflow-hidden relative">
+            
+            {/* Sliding Track: translates by (423px + 16px gap) = 439px per slide */}
             <div 
-              className="flex transition-transform duration-700 ease-in-out gap-4 z-10"
+              className="flex transition-transform duration-700 ease-in-out gap-4"
               style={{
-                transform: `translateX(-${currentSlide * 33.333}%)`
+                transform: `translateX(-${currentSlide * 439}px)`
               }}
             >
-              {heroBanners.concat(heroBanners).concat(heroBanners).map((banner, index) => (
+              {heroBanners.concat(heroBanners).map((banner, index) => (
                 <div
                   key={`${banner.id}-${index}`}
-                  className="w-full md:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] flex-shrink-0"
+                  className="w-[423px] min-w-[423px] max-w-[423px] h-[535px] flex-shrink-0"
                 >
-                  <div className={`relative h-[480px] md:h-[510px] rounded-2xl overflow-hidden shadow-md group select-none bg-gradient-to-b ${banner.bgGradient}`}>
+                  <div className={`relative w-full h-full rounded-[20px] overflow-hidden shadow-sm group select-none ${banner.bgColor}`}>
                     
-                    {/* Background Image with Scale Animation */}
+                    {/* CRYSTAL CLEAR Background Image (NO dark overlay, clean & vibrant) */}
                     <img
                       src={banner.image}
                       alt={banner.title}
-                      className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-60 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 pointer-events-none"
                     />
 
-                    {/* Dark gradient for text contrast */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent"></div>
-
-                    {/* Discount Circle Sticker */}
-                    <div className="absolute top-6 right-6 z-20">
-                      <div className={`w-16 h-16 rounded-full flex flex-col items-center justify-center font-black text-xl shadow-xl transform rotate-6 group-hover:rotate-0 transition-transform ${banner.badgeColor}`}>
-                        {banner.badge}
+                    {/* Round Sticker Badge (Top / Middle Right like Image 2) */}
+                    {banner.badge && (
+                      <div className="absolute top-7 right-7 z-20">
+                        <div className={`w-[90px] h-[90px] rounded-full flex items-center justify-center font-black text-[32px] shadow-2xl tracking-tighter ${banner.badgeColor}`}>
+                          {banner.badge}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                    {/* Card Body */}
-                    <div className="absolute inset-0 p-6 flex flex-col justify-end text-white z-10">
-                      <span className="text-xs uppercase tracking-widest font-extrabold text-amber-300 drop-shadow-sm mb-1">
-                        {banner.tag}
-                      </span>
-                      <span className="text-[11px] font-bold text-white/80 uppercase tracking-wider mb-2">
-                        {banner.discountSub}
-                      </span>
+                    {/* Card Content & Text placed cleanly at the bottom */}
+                    <div className="absolute inset-x-0 bottom-0 p-8 flex flex-col justify-end text-white z-10 bg-gradient-to-t from-black/75 via-black/25 to-transparent pt-24">
+                      
+                      {banner.tag && (
+                        <p className="text-[13px] font-medium text-white/95 drop-shadow-md mb-0.5 leading-snug">
+                          {banner.tag}
+                        </p>
+                      )}
 
-                      <h3 className="text-2xl font-black leading-tight tracking-tight mb-2 group-hover:text-rose-200 transition-colors">
+                      {banner.discountSub && (
+                        <p className="text-xs font-black uppercase tracking-wider text-amber-300 drop-shadow-md mb-1.5">
+                          {banner.discountSub}
+                        </p>
+                      )}
+
+                      <h3 className="text-[28px] font-black leading-[1.15] tracking-tight mb-3 text-white drop-shadow-lg">
                         {banner.title}
                       </h3>
 
-                      <p className="text-xs text-gray-200 line-clamp-2 mb-5 opacity-90 leading-relaxed font-light">
-                        {banner.desc}
-                      </p>
+                      {banner.subDesc && (
+                        <p className="text-[13px] text-gray-200 line-clamp-2 mb-4 leading-relaxed drop-shadow-md">
+                          {banner.subDesc}
+                        </p>
+                      )}
 
-                      <Link
-                        to={banner.link}
-                        className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-bold text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all duration-300 w-fit ${banner.btnColor}`}
-                      >
-                        <span>{banner.btnText}</span>
-                        <ChevronRight size={14} />
-                      </Link>
+                      <div className="mt-2">
+                        <Link
+                          to={banner.link}
+                          className={`inline-block px-6 py-3.5 rounded-md font-extrabold text-[13px] tracking-tight shadow-lg active:scale-95 transition-all duration-200 ${banner.btnColor}`}
+                        >
+                          {banner.btnText}
+                        </Link>
+                      </div>
+
                     </div>
 
                   </div>
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* 3. Slider Bottom Controls: Left/Right Arrow Buttons + Dots */}
-          <div className="flex items-center justify-between mt-4 px-2 lg:pl-[286px]">
-            
-            {/* Pagination Dots */}
-            <div className="flex items-center gap-2">
-              {heroBanners.map((_, idx) => (
+            {/* Slider Bottom Controls: Left/Right Arrow Buttons + Dot Indicators (Image 2 & 3) */}
+            <div className="flex items-center justify-between mt-4 px-1">
+              
+              {/* Pagination Dots */}
+              <div className="flex items-center gap-2">
+                {heroBanners.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentSlide(idx)}
+                    className={`h-2.5 rounded-full transition-all duration-300 ${
+                      currentSlide % totalBanners === idx
+                        ? 'w-7 bg-[#F0264C]'
+                        : 'w-2.5 bg-gray-300 hover:bg-gray-400'
+                    }`}
+                    title={`Slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Prev / Next Circular Arrow Buttons */}
+              <div className="flex items-center gap-2">
                 <button
-                  key={idx}
-                  onClick={() => setCurrentSlide(idx)}
-                  className={`h-2.5 rounded-full transition-all duration-300 ${
-                    currentSlide % totalBanners === idx
-                      ? 'w-8 bg-[#F0264C]'
-                      : 'w-2.5 bg-gray-300 hover:bg-gray-400'
-                  }`}
-                  title={`Slide ${idx + 1}`}
-                />
-              ))}
-            </div>
+                  onClick={prevSlide}
+                  className="w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-700 hover:bg-[#F0264C] hover:text-white hover:border-[#F0264C] transition-all active:scale-95"
+                  title="Previous Slide"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  onClick={nextSlide}
+                  className="w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-700 hover:bg-[#F0264C] hover:text-white hover:border-[#F0264C] transition-all active:scale-95"
+                  title="Next Slide"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
 
-            {/* Previous / Next Arrow Buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={prevSlide}
-                className="w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-700 hover:bg-[#F0264C] hover:text-white hover:border-[#F0264C] transition-all active:scale-95"
-                title="Previous Slide"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
-                onClick={nextSlide}
-                className="w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-700 hover:bg-[#F0264C] hover:text-white hover:border-[#F0264C] transition-all active:scale-95"
-                title="Next Slide"
-              >
-                <ChevronRight size={18} />
-              </button>
             </div>
 
           </div>
