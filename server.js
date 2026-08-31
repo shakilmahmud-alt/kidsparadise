@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import authHandler from './api/auth.js';
+import storeHandler from './api/store.js';
 import paymentHandler from './api/payment.js';
 import paymentSuccessHandler from './api/payment-success.js';
 import paymentFailHandler from './api/payment-fail.js';
@@ -16,15 +18,12 @@ const app = express();
 const PORT = process.env.API_PORT || 5000;
 
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Logging middleware
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-    if (req.body && Object.keys(req.body).length > 0) {
-        console.log('Request body:', JSON.stringify(req.body, null, 2));
-    }
     next();
 });
 
@@ -34,10 +33,37 @@ const vercelWrapper = (handler) => async (req, res) => {
         await handler(req, res);
     } catch (error) {
         console.error('API Error:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        res.status(500).json({ error: 'Internal Server Error', message: error.message });
     }
 };
 
+// 1. Auth routes
+app.all('/api/auth', vercelWrapper(authHandler));
+app.all('/api/auth/:action', vercelWrapper(authHandler));
+
+// 2. Store routes
+app.all('/api/store-data', vercelWrapper(storeHandler));
+app.all('/api/products', vercelWrapper(storeHandler));
+app.all('/api/products/:id', vercelWrapper(storeHandler));
+app.all('/api/categories', vercelWrapper(storeHandler));
+app.all('/api/categories/:id', vercelWrapper(storeHandler));
+app.all('/api/brands', vercelWrapper(storeHandler));
+app.all('/api/brands/:id', vercelWrapper(storeHandler));
+app.all('/api/orders', vercelWrapper(storeHandler));
+app.all('/api/orders/:id', vercelWrapper(storeHandler));
+app.all('/api/coupons', vercelWrapper(storeHandler));
+app.all('/api/coupons/:id', vercelWrapper(storeHandler));
+app.all('/api/settings', vercelWrapper(storeHandler));
+app.all('/api/reviews', vercelWrapper(storeHandler));
+app.all('/api/reviews/:id', vercelWrapper(storeHandler));
+app.all('/api/addresses', vercelWrapper(storeHandler));
+app.all('/api/addresses/:id', vercelWrapper(storeHandler));
+app.all('/api/wishlist', vercelWrapper(storeHandler));
+app.all('/api/wishlist/:id', vercelWrapper(storeHandler));
+app.all('/api/pages', vercelWrapper(storeHandler));
+app.all('/api/pages/:id', vercelWrapper(storeHandler));
+
+// 3. Payment routes
 app.post('/api/payment', vercelWrapper(paymentHandler));
 app.post('/api/payment-success', vercelWrapper(paymentSuccessHandler));
 app.get('/api/payment-success', vercelWrapper(paymentSuccessHandler));
@@ -47,11 +73,13 @@ app.post('/api/payment-cancel', vercelWrapper(paymentCancelHandler));
 app.get('/api/payment-cancel', vercelWrapper(paymentCancelHandler));
 app.post('/api/payment-ipn', vercelWrapper(paymentIpnHandler));
 
+// 4. Utility routes
 app.get('/api/imagekit-auth', vercelWrapper(imagekitAuthHandler));
 app.post('/api/send-invoice', vercelWrapper(sendInvoiceHandler));
 app.get('/api/sitemap', vercelWrapper(sitemapHandler));
 
 app.listen(PORT, () => {
-    console.log(`API Server running on http://localhost:${PORT}`);
+    console.log(`KidsParadise API Server running on http://localhost:${PORT}`);
 });
+
 

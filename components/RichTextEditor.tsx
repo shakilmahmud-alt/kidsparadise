@@ -7,7 +7,6 @@ import {
   Minimize2, Palette, Smile, Type as TypeIcon, X
 } from 'lucide-react';
 
-import { supabase } from '../lib/supabase';
 import { uploadToImageKit } from '../lib/imagekit';
 
 interface RichTextEditorProps {

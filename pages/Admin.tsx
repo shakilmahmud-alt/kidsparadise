@@ -1,7 +1,6 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
-import { supabase } from '../lib/supabase';
 import { useParams, useNavigate } from 'react-router-dom';
 
 import {

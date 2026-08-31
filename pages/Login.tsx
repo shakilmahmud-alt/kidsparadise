@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import api from '../lib/api';
 
 const Login: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,7 +16,7 @@ const Login: React.FC = () => {
     fullName: ''
   });
   
-  const { user, isAdmin } = useStore();
+  const { user, isAdmin, refreshAllData } = useStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,27 +41,12 @@ const Login: React.FC = () => {
 
     try {
       if (isLogin) {
-        const { error: loginError } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password
-        });
-        if (loginError) throw loginError;
+        await api.auth.login(formData.email, formData.password);
       } else {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              full_name: formData.fullName
-            }
-          }
-        });
-        if (signUpError) throw signUpError;
-        alert("Registration successful! You can now log in.");
-        setIsLogin(true);
-        setLoading(false);
-        return;
+        await api.auth.register(formData.email, formData.password, formData.fullName);
+        alert("Registration successful! Welcome to KidsParadise.");
       }
+      await refreshAllData();
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
