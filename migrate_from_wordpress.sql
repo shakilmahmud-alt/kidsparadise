@@ -1,8 +1,8 @@
 -- KidsParadise: Automated WordPress WooCommerce to Clean MySQL Migration Script
+-- Prefix: wpi3_
 -- INSTRUCTIONS:
--- 1. First run `schema.mysql.sql` in your phpMyAdmin database to create the new tables.
--- 2. Then run this script in the SAME database (where your WordPress wp_* tables are present).
--- 3. If your WordPress table prefix is not `wp_`, simply find & replace `wp_` with your prefix.
+-- 1. Ensure `schema.mysql.sql` was run first in your phpMyAdmin database.
+-- 2. Run this script in the SAME database (where your wpi3_* tables are present).
 
 -- 1. Migrate Categories from WooCommerce to `categories` table
 INSERT INTO `categories` (`id`, `name`, `slug`, `item_count`, `created_at`)
@@ -12,8 +12,8 @@ SELECT
     t.slug AS slug,
     tt.count AS item_count,
     NOW() AS created_at
-FROM `wp_terms` t
-INNER JOIN `wp_term_taxonomy` tt ON t.term_id = tt.term_id
+FROM `wpi3_terms` t
+INNER JOIN `wpi3_term_taxonomy` tt ON t.term_id = tt.term_id
 WHERE tt.taxonomy = 'product_cat'
 ON DUPLICATE KEY UPDATE 
     `name` = VALUES(`name`),
@@ -50,28 +50,28 @@ SELECT
     IF(att.guid IS NOT NULL, JSON_ARRAY(att.guid), JSON_ARRAY()) AS images,
     IF(pm_featured.meta_value = 'yes', 1, 0) AS is_featured,
     p.post_date AS created_at
-FROM `wp_posts` p
+FROM `wpi3_posts` p
 
 -- Price
-LEFT JOIN `wp_postmeta` pm_price 
+LEFT JOIN `wpi3_postmeta` pm_price 
     ON p.ID = pm_price.post_id AND pm_price.meta_key = '_price'
 
 -- Regular Price
-LEFT JOIN `wp_postmeta` pm_regular_price 
+LEFT JOIN `wpi3_postmeta` pm_regular_price 
     ON p.ID = pm_regular_price.post_id AND pm_regular_price.meta_key = '_regular_price'
 
 -- SKU
-LEFT JOIN `wp_postmeta` pm_sku 
+LEFT JOIN `wpi3_postmeta` pm_sku 
     ON p.ID = pm_sku.post_id AND pm_sku.meta_key = '_sku'
 
 -- Featured
-LEFT JOIN `wp_postmeta` pm_featured 
+LEFT JOIN `wpi3_postmeta` pm_featured 
     ON p.ID = pm_featured.post_id AND pm_featured.meta_key = '_featured'
 
 -- Thumbnail Image
-LEFT JOIN `wp_postmeta` pm_thumb 
+LEFT JOIN `wpi3_postmeta` pm_thumb 
     ON p.ID = pm_thumb.post_id AND pm_thumb.meta_key = '_thumbnail_id'
-LEFT JOIN `wp_posts` att 
+LEFT JOIN `wpi3_posts` att 
     ON pm_thumb.meta_value = att.ID AND att.post_type = 'attachment'
 
 -- Category Name (Primary)
@@ -79,9 +79,9 @@ LEFT JOIN (
     SELECT 
         tr.object_id,
         t.name AS category_name
-    FROM `wp_term_relationships` tr
-    INNER JOIN `wp_term_taxonomy` tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
-    INNER JOIN `wp_terms` t ON tt.term_id = t.term_id
+    FROM `wpi3_term_relationships` tr
+    INNER JOIN `wpi3_term_taxonomy` tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
+    INNER JOIN `wpi3_terms` t ON tt.term_id = t.term_id
     WHERE tt.taxonomy = 'product_cat'
     GROUP BY tr.object_id
 ) cat ON p.ID = cat.object_id
