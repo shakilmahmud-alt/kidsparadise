@@ -13,27 +13,31 @@ export default async function handler(req, res) {
 
     // Smarter base URL detection for Vercel vs Local
     let baseUrl = process.env.VITE_APP_URL;
-    if (!baseUrl || (baseUrl.includes('localhost') && req.headers['host'] && !req.headers['host'].includes('localhost'))) {
-        const protocol = req.headers['x-forwarded-proto'] || 'http';
-        const host = req.headers['host'];
-        baseUrl = `${protocol}://${host}`;
+    if (!baseUrl) {
+        if (req.headers['host'] && req.headers['host'].includes('localhost')) {
+            baseUrl = 'http://localhost:5173';
+        } else if (req.headers['host']) {
+            const protocol = req.headers['x-forwarded-proto'] || 'http';
+            baseUrl = `${protocol}://${req.headers['host']}`;
+        } else {
+            baseUrl = 'http://localhost:5173';
+        }
     }
 
     const data = {
         total_amount: amount,
         currency: 'BDT',
-        tran_id: transactionId,
-        success_url: `${baseUrl}/order-success/${transactionId}`,
-        fail_url: `${baseUrl}/checkout`,
-        cancel_url: `${baseUrl}/checkout`,
-        ipn_url: `${baseUrl}/api/ipn`,
-
+        tran_id: String(transactionId),
+        success_url: `${baseUrl}/api/payment-success?tran_id=${transactionId}`,
+        fail_url: `${baseUrl}/api/payment-fail?tran_id=${transactionId}`,
+        cancel_url: `${baseUrl}/api/payment-cancel?tran_id=${transactionId}`,
+        ipn_url: `${baseUrl}/api/payment-ipn`,
 
         shipping_method: 'Courier',
-        product_name: 'Grocery Items',
-        product_category: 'Grocery',
+        product_name: 'Zerobaby Store Products',
+        product_category: 'Baby Care & Toys',
         product_profile: 'general',
-        cus_name: customerName || 'Customer Name',
+        cus_name: customerName || 'Customer',
         cus_email: customerEmail || 'customer@example.com',
         cus_add1: 'Dhaka',
         cus_city: 'Dhaka',
@@ -57,5 +61,5 @@ export default async function handler(req, res) {
         console.error('SSLCommerz Error:', error);
         res.status(500).json({ error: 'Payment initialization failed', message: error.message });
     }
-
-}
+}
+

@@ -86,7 +86,9 @@ const OrderSuccess: React.FC = () => {
               </div>
               <div className="flex justify-between md:justify-end gap-3">
                 <span className="text-gray-400">Payment:</span>
-                <span className="text-gray-800 font-bold">Cash on Delivery</span>
+                <span className="text-gray-800 font-bold">
+                  {location.state?.paymentMethod === 'online' || (order as any)?.paymentMethod === 'online' || (order as any)?.payment_method?.toLowerCase().includes('online') || (order as any)?.payment_method?.toLowerCase().includes('card') ? 'Online Payment (Card / Mobile)' : 'Cash on Delivery'}
+                </span>
               </div>
               <div className="flex justify-between md:justify-end gap-3 items-center">
                 <span className="text-gray-400">Status:</span>

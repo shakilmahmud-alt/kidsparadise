@@ -37,6 +37,12 @@ const Checkout: React.FC = () => {
         area: defaultAddress?.area || prev.area
       }));
     }
+
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get('payment_error');
+    if (err) {
+      setCheckoutError(decodeURIComponent(err));
+    }
   }, [user, userProfile, addresses]);
   
   const districts = Object.keys(DISTRICT_AREA_DATA).sort((a, b) => a.localeCompare(b));
@@ -105,7 +111,7 @@ const Checkout: React.FC = () => {
       }
 
       navigate(`/order-success/${order.id}`, { 
-        state: { order },
+        state: { order, paymentMethod },
         replace: true 
       });
 
@@ -217,16 +223,35 @@ const Checkout: React.FC = () => {
             </div>
 
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-5 md:p-12">
-               <h2 className="text-xl font-black text-gray-800 mb-6 md:mb-8 flex items-center gap-4 uppercase tracking-tighter"><span className="w-10 h-10 rounded-2xl bg-[#fdf2f5] text-[#e92c5d] flex items-center justify-center text-lg font-black border border-rose-100">02</span>Payment Method</h2>
+               <h2 className="text-xl font-black text-gray-800 mb-6 md:mb-8 flex items-center gap-4 uppercase tracking-tighter">
+                 <span className="w-10 h-10 rounded-2xl bg-[#fdf2f5] text-[#e92c5d] flex items-center justify-center text-lg font-black border border-rose-100">02</span>
+                 Payment Method
+               </h2>
                <div className="space-y-4">
+                {/* Cash on Delivery */}
                 <label className={`flex items-center gap-3 md:gap-6 p-4 md:p-8 border-2 rounded-[1.5rem] md:rounded-[2rem] cursor-pointer transition-all active:scale-[0.99] ${paymentMethod === 'cod' ? 'border-[#e92c5d] bg-rose-50/20 shadow-xl shadow-rose-50/20' : 'border-gray-100 bg-white hover:border-gray-200'}`}>
                   <input type="radio" name="payment" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="w-5 h-5 md:w-6 md:h-6 accent-[#e92c5d] shrink-0" />
                   <div className="flex-1 min-w-0">
                     <span className="font-black text-gray-800 text-sm md:text-lg block leading-tight mb-1 md:mb-2">Cash on Delivery</span>
-                    <span className="text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-[0.5px] md:tracking-[1px] block leading-normal">Standard delivery in 2-3 business days.</span>
+                    <span className="text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-[0.5px] md:tracking-[1px] block leading-normal">Standard delivery in 2-3 business days. Pay in cash when receiving.</span>
                   </div>
                   <div className={`w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center shadow-sm md:shadow-md transition-colors shrink-0 ${paymentMethod === 'cod' ? 'bg-white text-[#e92c5d]' : 'bg-gray-50 text-gray-400'}`}>
                     <Truck className="w-5 h-5 md:w-7 md:h-7" />
+                  </div>
+                </label>
+
+                {/* Card / Online Payment / Mobile Banking */}
+                <label className={`flex items-center gap-3 md:gap-6 p-4 md:p-8 border-2 rounded-[1.5rem] md:rounded-[2rem] cursor-pointer transition-all active:scale-[0.99] ${paymentMethod === 'online' ? 'border-[#e92c5d] bg-rose-50/20 shadow-xl shadow-rose-50/20' : 'border-gray-100 bg-white hover:border-gray-200'}`}>
+                  <input type="radio" name="payment" checked={paymentMethod === 'online'} onChange={() => setPaymentMethod('online')} className="w-5 h-5 md:w-6 md:h-6 accent-[#e92c5d] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 md:mb-2 flex-wrap">
+                      <span className="font-black text-gray-800 text-sm md:text-lg block leading-tight">Card / Mobile Banking / Net Banking</span>
+                      <span className="bg-rose-100 text-[#e92c5d] text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">SSLCommerz</span>
+                    </div>
+                    <span className="text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-[0.5px] md:tracking-[1px] block leading-normal">Visa, Mastercard, bKash, Nagad, Rocket, DBBL Nexus, Islamic Banks & more.</span>
+                  </div>
+                  <div className={`w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center shadow-sm md:shadow-md transition-colors shrink-0 ${paymentMethod === 'online' ? 'bg-white text-[#e92c5d]' : 'bg-gray-50 text-gray-400'}`}>
+                    <CreditCard className="w-5 h-5 md:w-7 md:h-7" />
                   </div>
                 </label>
               </div>
@@ -260,7 +285,7 @@ const Checkout: React.FC = () => {
                 <div className="flex justify-between text-[14px] font-bold text-gray-400 uppercase tracking-widest"><span>Shipping</span><span className="text-gray-800">৳{shipping.toFixed(2)}</span></div>
                 
                 {appliedCoupon && (
-                  <div className="flex justify-between text-[14px] font-black text-[#e92c5d] items-center bg-rose-50 p-4 rounded-2xl border border-rose-100 animate-in slide-in-from-right-2">
+                  <div className="flex justify-between text-[14px] font-black text-[#e92c5d] items-center bg-rose-50 p-4 rounded-2xl border border-rose-100 animate-in slide-from-right-2">
                     <span className="flex items-center gap-2"><Ticket size={14}/> {appliedCoupon.code}</span>
                     <span>-৳{discount.toFixed(2)}</span>
                   </div>
@@ -279,8 +304,13 @@ const Checkout: React.FC = () => {
                 disabled={isSubmitting} 
                 className={`w-full mt-6 md:mt-10 text-white font-black py-4 md:py-6 rounded-[15px] md:rounded-[20px] shadow-2xl transition-all flex items-center justify-center gap-3 uppercase tracking-[1px] md:tracking-[2px] text-sm md:text-[16px] relative z-10 ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none' : 'bg-[#e92c5d] hover:bg-[#c81d4a] shadow-rose-100/50 active:scale-95'}`}
               >
-                {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Confirm Order'}
+                {isSubmitting ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  paymentMethod === 'online' ? 'Proceed to Payment (SSLCommerz)' : 'Confirm Order'
+                )}
               </button>
+
             </div>
           </div>
         </form>
