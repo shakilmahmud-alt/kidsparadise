@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import authHandler from './api/auth.js';
 import storeHandler from './api/store.js';
 import paymentHandler from './api/payment.js';
@@ -14,8 +16,11 @@ import sitemapHandler from './api/sitemap.js';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
-const PORT = process.env.API_PORT || 5000;
+const PORT = process.env.PORT || process.env.API_PORT || 5000;
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -78,8 +83,17 @@ app.get('/api/imagekit-auth', vercelWrapper(imagekitAuthHandler));
 app.post('/api/send-invoice', vercelWrapper(sendInvoiceHandler));
 app.get('/api/sitemap', vercelWrapper(sitemapHandler));
 
-app.listen(PORT, () => {
-    console.log(`KidsParadise API Server running on http://localhost:${PORT}`);
+// 5. Serve Frontend static assets
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// 6. SPA fallback for client-side routing
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
+
+app.listen(PORT, () => {
+    console.log(`KidsParadise Server running on port ${PORT}`);
+});
+
 
 
