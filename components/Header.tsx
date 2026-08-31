@@ -147,7 +147,7 @@ export const Header: React.FC = () => {
       
       {/* 1. Top Announcement Bar (Dismissible) */}
       {showTopBar && (
-        <div className="bg-[#0072CE] text-white text-xs py-2 px-4 relative flex items-center justify-between z-50">
+        <div className="bg-[#F0264C] text-white text-xs py-2 px-4 relative flex items-center justify-between z-50">
           <div className="container mx-auto flex items-center justify-center gap-2 font-medium tracking-wide">
             <span className="bg-white/20 px-2 py-0.5 rounded text-[11px] font-bold uppercase">Special Offer</span>
             <span>FREE Shipping across Bangladesh on orders over ৳2,999! 🚚</span>
@@ -221,7 +221,7 @@ export const Header: React.FC = () => {
             {/* Official Logo */}
             <Link to="/" className="flex items-center">
               <img
-                src="https://kidsparadise.com.bd/wp-content/uploads/2025/08/cropped-kp-logo.png"
+                src="https://kidsparadise.com.bd/wp-content/uploads/2026/08/kp-logo-1.1.png"
                 alt="KidsParadise"
                 className="h-10 md:h-14 w-auto object-contain"
                 fetchPriority="high"
@@ -340,7 +340,7 @@ export const Header: React.FC = () => {
           
           <Link to="/" className="flex items-center flex-shrink-0">
             <img
-              src="https://kidsparadise.com.bd/wp-content/uploads/2025/08/cropped-kp-logo.png"
+              src="https://kidsparadise.com.bd/wp-content/uploads/2026/08/kp-logo-1.1.png"
               alt="KidsParadise"
               className="h-8 md:h-10 w-auto object-contain"
             />
@@ -400,7 +400,7 @@ export const Header: React.FC = () => {
           {/* Drawer Header */}
           <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
             <img
-              src="https://kidsparadise.com.bd/wp-content/uploads/2025/08/cropped-kp-logo.png"
+              src="https://kidsparadise.com.bd/wp-content/uploads/2026/08/kp-logo-1.1.png"
               alt="KidsParadise"
               className="h-8 w-auto object-contain"
             />
