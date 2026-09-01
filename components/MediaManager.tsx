@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Upload, Search, Copy, Check, Trash2, ExternalLink, Image as ImageIcon, 
   FileText, RefreshCw, AlertCircle, Eye, X, HardDrive, CheckCircle2, Film, Folder, Play,
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CheckSquare, Square, AlertTriangle
 } from 'lucide-react';
 import { MediaItem } from '../types';
 import { uploadToCpanel } from '../lib/cpanelUpload';
@@ -20,6 +20,10 @@ export const MediaManager: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
+  // Bulk Selection State
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(100);
@@ -48,13 +52,13 @@ export const MediaManager: React.FC = () => {
           setTotalItems(Number(data.total || data.media.length));
           setTotalPages(Number(data.totalPages || Math.ceil((data.total || 1) / pageSize)));
           setCurrentPage(page);
+          setSelectedIds([]);
           return;
         }
       }
 
       // Direct cPanel bridge fallback with MySQL pagination
       let whereClause = 'WHERE 1=1';
-      const params: any[] = [];
       if (search.trim()) {
         whereClause += ` AND (name LIKE '%${search.trim()}%' OR url LIKE '%${search.trim()}%')`;
       }
@@ -113,6 +117,7 @@ export const MediaManager: React.FC = () => {
             createdAt: m.created_at
           })));
           setCurrentPage(page);
+          setSelectedIds([]);
         }
       }
     } catch (err: any) {
@@ -128,21 +133,37 @@ export const MediaManager: React.FC = () => {
     fetchMedia(1, '', 'all');
   }, []);
 
-  // Debounced search handler
+  // Search handler
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
     setCurrentPage(1);
     fetchMedia(1, query, selectedFilter);
   };
 
-  // Filter change handler
+  // Filter handler
   const handleFilterChange = (filter: 'all' | 'image' | 'video' | 'products' | 'banners') => {
     setSelectedFilter(filter);
     setCurrentPage(1);
     fetchMedia(1, searchQuery, filter);
   };
 
-  // Handle file uploads
+  // Bulk Selection Toggles
+  const toggleSelectAll = () => {
+    if (selectedIds.length === mediaList.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(mediaList.map(m => m.id));
+    }
+  };
+
+  const toggleSelectItem = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  // Chunked File Upload
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
@@ -158,56 +179,14 @@ export const MediaManager: React.FC = () => {
       const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|avi)$/i.test(file.name);
       const effectiveFolder = isVideo ? 'videos' : targetFolder;
 
-      setUploadProgress(`Uploading ${i + 1} of ${totalFiles}: ${file.name} to cPanel /uploads/${effectiveFolder}/...`);
+      setUploadProgress(`Starting ${file.name}...`);
 
       try {
-        // 1. Direct cPanel upload
-        const uploadedUrl = await uploadToCpanel(file, effectiveFolder);
+        // Chunked cPanel Upload with live progress
+        const uploadedUrl = await uploadToCpanel(file, effectiveFolder, (percent) => {
+          setUploadProgress(`Uploading ${i + 1}/${totalFiles}: ${file.name} (${percent}%)...`);
+        });
 
-        // 2. Save metadata in MySQL media table
-        let savedItem: MediaItem | null = null;
-        try {
-          const saveRes = await fetch('/api/media', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: file.name,
-              url: uploadedUrl,
-              fileType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
-              size: file.size
-            })
-          });
-          if (saveRes.ok) {
-            const data = await saveRes.json();
-            savedItem = data.media;
-          }
-        } catch {
-          // Direct cPanel bridge fallback
-          await fetch('https://kidsparadise.com.bd/api.php', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-API-Secret': 'kidsparadise_jwt_secret_key_2026'
-            },
-            body: JSON.stringify({
-              action: 'query',
-              sql: 'INSERT INTO media (name, url, file_type, size, created_at) VALUES (?, ?, ?, ?, NOW())',
-              params: [file.name, uploadedUrl, file.type || (isVideo ? 'video/mp4' : 'image/jpeg'), file.size]
-            })
-          });
-        }
-
-        const newItem: MediaItem = savedItem || {
-          id: String(Date.now() + i),
-          name: file.name,
-          url: uploadedUrl,
-          fileType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
-          size: file.size,
-          createdAt: new Date().toISOString()
-        };
-
-        setMediaList(prev => [newItem, ...prev]);
-        setTotalItems(prev => prev + 1);
         successfulCount++;
       } catch (err: any) {
         console.error(`Error uploading ${file.name}:`, err);
@@ -221,24 +200,24 @@ export const MediaManager: React.FC = () => {
 
     if (successfulCount > 0) {
       setSuccessMessage(`Successfully uploaded ${successfulCount} file(s) directly to cPanel!`);
-      setTimeout(() => setSuccessMessage(null), 4000);
+      setTimeout(() => setSuccessMessage(null), 5000);
       fetchMedia(1, searchQuery, selectedFilter);
     }
   };
 
-  // Copy URL with clipboard feedback
-  const handleCopyUrl = (item: MediaItem) => {
-    navigator.clipboard.writeText(item.url);
-    setCopiedId(item.id);
-    setTimeout(() => setCopiedId(null), 2500);
-  };
+  // Permanent Delete Single Item from cPanel & DB
+  const handleDeleteSingle = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm('Are you sure you want to permanently delete this file from cPanel storage and database? This action cannot be undone.')) return;
 
-  // Delete media item
-  const handleDeleteMedia = async (id: string) => {
-    if (!window.confirm('Are you sure you want to remove this media record?')) return;
-
+    setIsDeleting(true);
     try {
-      await fetch(`/api/media?id=${id}`, { method: 'DELETE' });
+      // 1. Send delete request
+      const res = await fetch(`/api/media?id=${id}`, {
+        method: 'DELETE'
+      });
+
+      // 2. Direct cPanel bridge delete fallback
       await fetch('https://kidsparadise.com.bd/api.php', {
         method: 'POST',
         headers: {
@@ -246,17 +225,73 @@ export const MediaManager: React.FC = () => {
           'X-API-Secret': 'kidsparadise_jwt_secret_key_2026'
         },
         body: JSON.stringify({
-          action: 'query',
-          sql: 'DELETE FROM media WHERE id = ?',
-          params: [id]
+          action: 'delete_media',
+          ids: [id]
         })
       });
+
       setMediaList(prev => prev.filter(m => m.id !== id));
+      setSelectedIds(prev => prev.filter(item => item !== id));
       setTotalItems(prev => Math.max(0, prev - 1));
       if (previewItem?.id === id) setPreviewItem(null);
+
+      setSuccessMessage('File permanently deleted from cPanel storage and database.');
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
-      alert('Error deleting media: ' + err.message);
+      alert('Delete error: ' + err.message);
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  // Permanent Bulk Delete from cPanel & DB
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to permanently delete ${selectedIds.length} file(s) from cPanel storage and database? This will free up server disk space and cannot be undone.`)) return;
+
+    setIsDeleting(true);
+    setErrorMessage(null);
+    try {
+      // 1. Send bulk delete request
+      await fetch('/api/media', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds })
+      });
+
+      // 2. Direct cPanel bridge bulk delete
+      await fetch('https://kidsparadise.com.bd/api.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Secret': 'kidsparadise_jwt_secret_key_2026'
+        },
+        body: JSON.stringify({
+          action: 'delete_media',
+          ids: selectedIds
+        })
+      });
+
+      const deletedCount = selectedIds.length;
+      setMediaList(prev => prev.filter(m => !selectedIds.includes(m.id)));
+      setTotalItems(prev => Math.max(0, prev - deletedCount));
+      setSelectedIds([]);
+
+      setSuccessMessage(`Successfully deleted ${deletedCount} file(s) permanently from cPanel storage!`);
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err: any) {
+      setErrorMessage(`Bulk delete failed: ${err.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Copy URL with clipboard feedback
+  const handleCopyUrl = (item: MediaItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    navigator.clipboard.writeText(item.url);
+    setCopiedId(item.id);
+    setTimeout(() => setCopiedId(null), 2500);
   };
 
   // Format bytes into readable format
@@ -269,7 +304,7 @@ export const MediaManager: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 font-sans text-slate-800">
+    <div className="space-y-8 animate-in fade-in duration-500 font-sans text-slate-800 relative pb-16">
       
       {/* Header & cPanel Storage Indicator */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 md:p-8 rounded-2xl border border-gray-100 shadow-sm">
@@ -283,7 +318,7 @@ export const MediaManager: React.FC = () => {
             </span>
           </div>
           <p className="text-sm text-gray-500 mt-1">
-            Browse and manage all {totalItems.toLocaleString()} files on your cPanel server (<code className="text-xs bg-gray-100 px-1 py-0.5 rounded font-mono">/public_html/uploads/</code> & <code className="text-xs bg-gray-100 px-1 py-0.5 rounded font-mono">wp-content/uploads/</code>).
+            Browse, upload, and permanently delete files from your cPanel storage (<code className="text-xs bg-gray-100 px-1 py-0.5 rounded font-mono">/public_html/uploads/</code>).
           </p>
         </div>
 
@@ -353,15 +388,17 @@ export const MediaManager: React.FC = () => {
 
           <div>
             <h4 className="text-lg font-bold text-gray-800">
-              {isUploading ? 'Uploading directly to cPanel...' : 'Drag & drop files here, or browse from computer'}
+              {isUploading ? 'Uploading to cPanel via Chunked Stream...' : 'Drag & drop files here, or browse from computer'}
             </h4>
             <p className="text-xs text-gray-500 mt-1">
-              Supports Images (JPG, PNG, WEBP, GIF, SVG), Videos (MP4, WEBM, MOV), and PDFs.
+              Chunked upload supports files of any size (Videos, MP4, Large Images, PDFs).
             </p>
             {uploadProgress && (
-              <p className="text-xs font-bold text-[#F0264C] mt-2 animate-pulse">
-                {uploadProgress}
-              </p>
+              <div className="mt-3 space-y-1.5">
+                <p className="text-xs font-bold text-[#F0264C] animate-pulse">
+                  {uploadProgress}
+                </p>
+              </div>
             )}
           </div>
 
@@ -394,22 +431,44 @@ export const MediaManager: React.FC = () => {
         </div>
       )}
 
-      {/* Search & Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
-        {/* Search */}
-        <div className="relative w-full sm:w-80">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search all 5,378+ cPanel files..."
-            value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-[#F0264C] focus:bg-white transition-all"
-          />
+      {/* Search, Filter & Bulk Select Bar */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
+        
+        {/* Search & Select All */}
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <button
+            onClick={toggleSelectAll}
+            className={`p-2 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+              selectedIds.length > 0 && selectedIds.length === mediaList.length
+                ? 'bg-[#F0264C] text-white border-[#F0264C]'
+                : selectedIds.length > 0
+                ? 'bg-rose-50 text-[#F0264C] border-rose-200'
+                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+            }`}
+            title="Select all files on this page"
+          >
+            {selectedIds.length > 0 && selectedIds.length === mediaList.length ? (
+              <CheckSquare size={16} />
+            ) : (
+              <Square size={16} />
+            )}
+            <span className="hidden sm:inline">Select Page ({mediaList.length})</span>
+          </button>
+
+          <div className="relative flex-1 sm:w-80">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search all 5,378+ cPanel files..."
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-[#F0264C] focus:bg-white transition-all"
+            />
+          </div>
         </div>
 
         {/* Filter Buttons */}
-        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
+        <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto">
           {[
             { id: 'all', label: 'All Files' },
             { id: 'image', label: 'Images' },
@@ -460,17 +519,33 @@ export const MediaManager: React.FC = () => {
             const isVideo = item.fileType.startsWith('video/') || /\.(mp4|webm|mov|avi)$/i.test(item.url);
             const isImage = (item.fileType.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(item.url)) && !isVideo;
             const isCopied = copiedId === item.id;
+            const isSelected = selectedIds.includes(item.id);
 
             return (
               <div 
                 key={item.id}
-                className="group bg-white rounded-2xl border border-gray-200/80 overflow-hidden shadow-xs hover:shadow-lg hover:border-rose-200 transition-all flex flex-col justify-between"
+                onClick={() => setPreviewItem(item)}
+                className={`group bg-white rounded-2xl border overflow-hidden shadow-xs hover:shadow-lg transition-all flex flex-col justify-between cursor-pointer relative ${
+                  isSelected 
+                    ? 'border-[#F0264C] ring-2 ring-rose-200' 
+                    : 'border-gray-200/80 hover:border-rose-200'
+                }`}
               >
-                {/* Thumbnail Preview Area */}
+                {/* Selection Checkbox on Card */}
                 <div 
-                  className="relative h-36 bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer"
-                  onClick={() => setPreviewItem(item)}
+                  onClick={(e) => toggleSelectItem(item.id, e)}
+                  className={`absolute top-2.5 left-2.5 z-20 w-6 h-6 rounded-lg flex items-center justify-center cursor-pointer transition-all shadow-sm ${
+                    isSelected 
+                      ? 'bg-[#F0264C] text-white ring-2 ring-white' 
+                      : 'bg-white/80 backdrop-blur-xs text-gray-400 hover:text-gray-800 opacity-70 group-hover:opacity-100'
+                  }`}
+                  title="Select for bulk delete"
                 >
+                  {isSelected ? <Check size={14} strokeWidth={3} /> : <Square size={14} />}
+                </div>
+
+                {/* Thumbnail Preview Area */}
+                <div className="relative h-36 bg-gray-50 flex items-center justify-center overflow-hidden">
                   {isVideo ? (
                     <div className="relative w-full h-full bg-slate-900 flex items-center justify-center text-white">
                       <Film size={36} className="text-rose-400 opacity-80" />
@@ -495,7 +570,7 @@ export const MediaManager: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Hover Overlay with Preview Icon */}
+                  {/* Hover Overlay with Preview & Direct Link */}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <button
                       type="button"
@@ -536,7 +611,7 @@ export const MediaManager: React.FC = () => {
                   <div className="flex items-center gap-1.5 pt-1">
                     <button
                       type="button"
-                      onClick={() => handleCopyUrl(item)}
+                      onClick={(e) => handleCopyUrl(item, e)}
                       className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
                         isCopied 
                           ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
@@ -557,9 +632,9 @@ export const MediaManager: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => handleDeleteMedia(item.id)}
+                      onClick={(e) => handleDeleteSingle(item.id, e)}
                       className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                      title="Delete record"
+                      title="Permanently delete from cPanel storage"
                     >
                       <Trash2 size={13} />
                     </button>
@@ -648,6 +723,41 @@ export const MediaManager: React.FC = () => {
               <ChevronsRight size={16} />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Floating Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white px-6 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-4 animate-in slide-in-from-bottom-5">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-[#F0264C] text-white text-xs font-bold flex items-center justify-center">
+              {selectedIds.length}
+            </span>
+            <span className="text-xs font-bold">files selected</span>
+          </div>
+
+          <div className="h-4 w-[1px] bg-slate-700" />
+
+          <button
+            onClick={handleBulkDelete}
+            disabled={isDeleting}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            {isDeleting ? (
+              <RefreshCw size={14} className="animate-spin" />
+            ) : (
+              <Trash2 size={14} />
+            )}
+            <span>Permanently Delete from cPanel ({selectedIds.length})</span>
+          </button>
+
+          <button
+            onClick={() => setSelectedIds([])}
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Cancel selection"
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
 

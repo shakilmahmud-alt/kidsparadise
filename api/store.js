@@ -573,12 +573,36 @@ export default async function handler(req, res) {
         });
       }
 
-      if (method === 'DELETE') {
-        const id = req.query?.id || req.body?.id || path.split('/').pop();
-        if (id) {
-          await query('DELETE FROM media WHERE id = ?', [id]);
+      if (method === 'DELETE' || (method === 'POST' && path.includes('/delete'))) {
+        let ids = req.body?.ids || [];
+        const singleId = req.query?.id || req.body?.id || (!path.endsWith('/media') && path.split('/').pop());
+        if (singleId && !ids.includes(singleId)) {
+          ids.push(singleId);
         }
-        return res.status(200).json({ success: true });
+
+        if (ids.length > 0) {
+          // 1. Call cPanel to physically unlink files from disk
+          try {
+            await fetch('https://kidsparadise.com.bd/api.php', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-API-Secret': 'kidsparadise_jwt_secret_key_2026'
+              },
+              body: JSON.stringify({
+                action: 'delete_media',
+                ids
+              })
+            });
+          } catch (e) {
+            console.warn('Physical delete call to cPanel failed:', e.message);
+          }
+
+          // 2. Delete from MySQL media table
+          const placeholders = ids.map(() => '?').join(',');
+          await query(`DELETE FROM media WHERE id IN (${placeholders})`, ids);
+        }
+        return res.status(200).json({ success: true, deletedCount: ids.length });
       }
     }
 

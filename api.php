@@ -73,7 +73,104 @@ if ($method === 'GET' && empty($action)) {
     exit();
 }
 
-// 5. Image & Media Upload Handler (Uploads directly to cPanel uploads/ subfolders)
+// 5. Chunked & Standard Upload Handler (Uploads directly to cPanel uploads/ subfolders)
+if ($action === 'upload_chunk') {
+    $fileId = preg_replace('/[^a-zA-Z0-9_-]/', '', $input['file_id'] ?? ($_POST['file_id'] ?? ''));
+    $chunkIndex = intval($input['chunk_index'] ?? ($_POST['chunk_index'] ?? 0));
+    $totalChunks = intval($input['total_chunks'] ?? ($_POST['total_chunks'] ?? 1));
+    $originalName = $input['name'] ?? ($_POST['name'] ?? 'file.bin');
+    $folder = preg_replace('/[^a-zA-Z0-9_-]/', '', $input['folder'] ?? ($_POST['folder'] ?? 'media'));
+
+    $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION)) ?: 'png';
+    $videoExts = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'flv'];
+    if (empty($folder)) {
+        $folder = in_array($ext, $videoExts) ? 'videos' : 'media';
+    }
+
+    $tempDir = __DIR__ . '/uploads/temp/';
+    if (!is_dir($tempDir)) {
+        mkdir($tempDir, 0755, true);
+    }
+
+    $chunkFile = $tempDir . $fileId . '_' . $chunkIndex . '.part';
+
+    // Get chunk binary data
+    $chunkData = null;
+    if (!empty($input['chunk_data'])) {
+        $base64 = preg_replace('#^data:[^;]+;base64,#i', '', $input['chunk_data']);
+        $chunkData = base64_decode($base64);
+    } elseif (isset($_FILES['chunk'])) {
+        $chunkData = file_get_contents($_FILES['chunk']['tmp_name']);
+    }
+
+    if ($chunkData === null || $chunkData === false) {
+        http_response_code(400);
+        echo json_encode(['error' => 'No chunk data received']);
+        exit();
+    }
+
+    file_put_contents($chunkFile, $chunkData);
+
+    // If all chunks received, assemble the final file
+    $allChunksPresent = true;
+    for ($i = 0; $i < $totalChunks; $i++) {
+        if (!file_exists($tempDir . $fileId . '_' . $i . '.part')) {
+            $allChunksPresent = false;
+            break;
+        }
+    }
+
+    if ($allChunksPresent) {
+        $targetDir = __DIR__ . '/uploads/' . $folder . '/';
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0755, true);
+        }
+
+        $cleanName = preg_replace('/[^a-zA-Z0-9_-]/', '_', pathinfo($originalName, PATHINFO_FILENAME));
+        $finalFileName = 'kp_' . time() . '_' . substr($cleanName, 0, 35) . '.' . $ext;
+        $finalPath = $targetDir . $finalFileName;
+
+        $out = fopen($finalPath, 'wb');
+        for ($i = 0; $i < $totalChunks; $i++) {
+            $part = $tempDir . $fileId . '_' . $i . '.part';
+            $in = fopen($part, 'rb');
+            while ($buff = fread($in, 8192)) {
+                fwrite($out, $buff);
+            }
+            fclose($in);
+            @unlink($part);
+        }
+        fclose($out);
+
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+        $host = $_SERVER['HTTP_HOST'];
+        $url = $protocol . $host . '/uploads/' . $folder . '/' . $finalFileName;
+        $fileSize = filesize($finalPath);
+        $fileType = in_array($ext, $videoExts) ? ('video/' . $ext) : ($ext === 'pdf' ? 'application/pdf' : 'image/' . $ext);
+
+        // Save to MySQL media table
+        try {
+            $stmt = $pdo->prepare('INSERT INTO media (name, url, file_type, size, created_at) VALUES (?, ?, ?, ?, NOW())');
+            $stmt->execute([$originalName, $url, $fileType, $fileSize]);
+        } catch (Exception $e) {}
+
+        echo json_encode([
+            'success' => true,
+            'url' => $url,
+            'name' => $originalName,
+            'fileName' => $finalFileName,
+            'folder' => $folder,
+            'size' => $fileSize,
+            'fileType' => $fileType,
+            'createdAt' => date('Y-m-d H:i:s')
+        ]);
+        exit();
+    }
+
+    echo json_encode(['success' => true, 'chunkReceived' => $chunkIndex, 'totalChunks' => $totalChunks]);
+    exit();
+}
+
 if ($action === 'upload') {
     if ($method !== 'POST') {
         http_response_code(405);
@@ -97,11 +194,7 @@ if ($action === 'upload') {
 
     // Auto assign folder by file type if not explicitly set
     if (empty($folder)) {
-        if (in_array($ext, $videoExts)) {
-            $folder = 'videos';
-        } else {
-            $folder = 'media';
-        }
+        $folder = in_array($ext, $videoExts) ? 'videos' : 'media';
     }
 
     $baseUploadDir = __DIR__ . '/uploads/';
@@ -146,9 +239,7 @@ if ($action === 'upload') {
         try {
             $stmt = $pdo->prepare('INSERT INTO media (name, url, file_type, size, created_at) VALUES (?, ?, ?, ?, NOW())');
             $stmt->execute([$originalName, $url, $fileType, $fileSize]);
-        } catch (Exception $ex) {
-            // Ignore if DB log fails
-        }
+        } catch (Exception $ex) {}
 
         echo json_encode([
             'success' => true,
@@ -166,6 +257,59 @@ if ($action === 'upload') {
         echo json_encode(['error' => 'Failed to save file in cPanel folder: uploads/' . $folder]);
         exit();
     }
+}
+
+// Delete media permanently from cPanel storage disk and MySQL
+if ($action === 'delete_media') {
+    $ids = $input['ids'] ?? ($_POST['ids'] ?? []);
+    if (!is_array($ids) && !empty($ids)) {
+        $ids = [$ids];
+    }
+    if (empty($ids) && !empty($_GET['id'])) {
+        $ids = [$_GET['id']];
+    }
+    if (empty($ids) && !empty($input['id'])) {
+        $ids = [$input['id']];
+    }
+
+    if (empty($ids)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'No media IDs provided']);
+        exit();
+    }
+
+    $deletedCount = 0;
+    foreach ($ids as $id) {
+        try {
+            // 1. Fetch URL from media table
+            $stmt = $pdo->prepare('SELECT url FROM media WHERE id = ?');
+            $stmt->execute([$id]);
+            $item = $stmt->fetch();
+
+            if ($item && !empty($item['url'])) {
+                $url = $item['url'];
+                $parsed = parse_url($url);
+                $path = $parsed['path'] ?? '';
+                if ($path) {
+                    $localPath = __DIR__ . $path;
+                    if (file_exists($localPath)) {
+                        @unlink($localPath);
+                    }
+                }
+            }
+
+            // 2. Delete from MySQL media table
+            $delStmt = $pdo->prepare('DELETE FROM media WHERE id = ?');
+            $delStmt->execute([$id]);
+            $deletedCount++;
+        } catch (Exception $e) {}
+    }
+
+    echo json_encode([
+        'success' => true,
+        'deletedCount' => $deletedCount
+    ]);
+    exit();
 }
 
 // 6. Generic SQL Bridge (For Node.js / Vercel Backend)
