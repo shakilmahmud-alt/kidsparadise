@@ -63,11 +63,20 @@ const CategoryPage: React.FC = () => {
   // Find current category
   const currentCategory = useMemo(() => {
     if (!categorySlug) return null;
-    return categories.find(c => 
-      c.slug === categorySlug || 
-      encodeURIComponent(c.name) === categorySlug || 
-      c.name.toLowerCase() === decodeURIComponent(categorySlug).toLowerCase()
-    );
+    const cleanSlug = decodeURIComponent(categorySlug).toLowerCase().trim().replace(/&amp;/g, '&');
+    return categories.find(c => {
+      const cSlug = (c.slug || '').toLowerCase().trim();
+      const cName = c.name.toLowerCase().trim().replace(/&amp;/g, '&');
+      return (
+        cSlug === cleanSlug || 
+        cName === cleanSlug ||
+        encodeURIComponent(c.name).toLowerCase() === cleanSlug ||
+        (cleanSlug === 'gear-travel' && (cSlug === 'gear-travel' || cName === 'gear & travel')) ||
+        (cleanSlug === 'baby-stationery' && (cSlug === 'baby-stationery' || cName === 'stationery')) ||
+        (cleanSlug === 'stationery' && (cSlug === 'baby-stationery' || cName === 'stationery')) ||
+        (cleanSlug === 'baby-care-hygiene' && (cSlug === 'baby-care-hygiene' || cName === 'care & hygiene'))
+      );
+    });
   }, [categorySlug, categories]);
 
   // Find background banner image for this category
@@ -158,15 +167,32 @@ const CategoryPage: React.FC = () => {
     return [currentCategory, ...getDescendants(currentCategory.id)];
   }, [currentCategory, categories]);
 
-  const descendantNames = useMemo(() => {
-    return descendantCategories.map(c => c.name);
-  }, [descendantCategories]);
-
   // Filter products that belong to the active category family
   const categoryProducts = useMemo(() => {
     if (!currentCategory) return [];
-    return products.filter(p => p.category.some(cat => descendantNames.includes(cat)));
-  }, [products, descendantNames, currentCategory]);
+
+    const targetNames = new Set(
+      descendantCategories.flatMap(c => {
+        const n = c.name.replace(/&amp;/g, '&').toLowerCase().trim();
+        const s = (c.slug || '').toLowerCase().trim();
+        const list = [n, s];
+        if (n === 'stationery' || s === 'baby-stationery') list.push('baby stationery', 'stationery');
+        if (n === 'care & hygiene' || s === 'baby-care-hygiene') list.push('baby care & hygiene', 'care & hygiene', 'baby care and hygiene');
+        if (n === 'gear & travel' || s === 'gear-travel') list.push('gear & travel', 'gear &amp; travel', 'gear and travel');
+        if (n === 'furniture & bedding' || s === 'furniture-bedding') list.push('furniture & bedding', 'furniture &amp; bedding', 'furniture and bedding');
+        if (n === 'apparels' || s === 'apparels') list.push("boy's fashion", "girl's fashion", "baby's fashion", 'apparels');
+        return list;
+      })
+    );
+
+    return products.filter(p => {
+      const prodCats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
+      return prodCats.some(cat => {
+        const cleanCat = String(cat).replace(/&amp;/g, '&').toLowerCase().trim();
+        return targetNames.has(cleanCat);
+      });
+    });
+  }, [products, descendantCategories, currentCategory]);
 
   // Initialize price range based on current category products and URL
   useEffect(() => {

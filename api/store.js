@@ -40,24 +40,47 @@ export default async function handler(req, res) {
         query('SELECT * FROM pages ORDER BY created_at DESC')
       ]);
 
-      const formattedProducts = products.map(p => ({
-        id: String(p.id),
-        name: p.name,
-        slug: p.slug,
-        price: Number(p.price),
-        originalPrice: p.original_price ? Number(p.original_price) : undefined,
-        category: p.category ? p.category.split(',').map(c => c.trim()) : [],
-        brand: p.brand || undefined,
-        unit: p.unit || undefined,
-        sku: p.sku || undefined,
-        images: safeJson(p.images, p.image_url ? [p.image_url] : []),
-        shortDescription: p.short_description || undefined,
-        description: p.description || '',
-        badge: p.badge || undefined,
-        isFeatured: Boolean(p.is_featured),
-        variants: safeJson(p.variants, []),
-        filterAttributes: safeJson(p.filter_attributes, [])
-      }));
+      const formattedProducts = products.map(p => {
+        let cats = p.category ? p.category.split(',').map(c => c.trim().replace(/&amp;/g, '&')) : [];
+        const extraCats = [];
+        cats.forEach(c => {
+          const lower = c.toLowerCase();
+          if (lower === 'baby stationery' || lower === 'stationery') {
+            extraCats.push('Stationery', 'Baby Stationery');
+          }
+          if (lower === 'baby care & hygiene' || lower === 'care & hygiene' || lower === 'baby care and hygiene') {
+            extraCats.push('Care & Hygiene', 'Baby Care & Hygiene');
+          }
+          if (lower === 'gear & travel' || lower === 'gear and travel') {
+            extraCats.push('Gear & Travel');
+          }
+          if (lower === 'furniture & bedding' || lower === 'furniture and bedding') {
+            extraCats.push('Furniture & Bedding');
+          }
+          if (lower === "boy's fashion" || lower === "girl's fashion" || lower === "baby's fashion" || lower === 'apparels') {
+            extraCats.push('Apparels');
+          }
+        });
+        const finalCats = Array.from(new Set([...cats, ...extraCats]));
+        return {
+          id: String(p.id),
+          name: p.name,
+          slug: p.slug,
+          price: Number(p.price),
+          originalPrice: p.original_price ? Number(p.original_price) : undefined,
+          category: finalCats,
+          brand: p.brand || undefined,
+          unit: p.unit || undefined,
+          sku: p.sku || undefined,
+          images: safeJson(p.images, p.image_url ? [p.image_url] : []),
+          shortDescription: p.short_description || undefined,
+          description: p.description || '',
+          badge: p.badge || undefined,
+          isFeatured: Boolean(p.is_featured),
+          variants: safeJson(p.variants, []),
+          filterAttributes: safeJson(p.filter_attributes, [])
+        };
+      });
 
       const formattedCategories = categories.map(c => ({
         id: String(c.id),

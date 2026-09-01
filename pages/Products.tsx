@@ -192,21 +192,39 @@ const Products: React.FC = () => {
 
   // Get all descendant categories for filtering products
   const categoryProducts = useMemo(() => {
+    if (selectedCategory === 'All') return products;
+
     const getDescendantsOnly = (catName: string): string[] => {
-      if (catName === 'All') return [];
-      const currentCat = categories.find(c => c.name === catName);
-      if (!currentCat) return [catName];
-      let names = [catName];
+      const cleanName = catName.replace(/&amp;/g, '&').toLowerCase().trim();
+      const currentCat = categories.find(c => {
+        const cName = c.name.replace(/&amp;/g, '&').toLowerCase().trim();
+        const cSlug = (c.slug || '').toLowerCase().trim();
+        return cName === cleanName || cSlug === cleanName;
+      });
+      if (!currentCat) return [cleanName];
+
+      let names = [currentCat.name.replace(/&amp;/g, '&').toLowerCase().trim(), (currentCat.slug || '').toLowerCase().trim()];
       categories.filter(c => c.parentId === currentCat.id).forEach(child => {
         names = [...names, ...getDescendantsOnly(child.name)];
       });
       return names;
     };
-    const filterCategories = selectedCategory === 'All' ? [] : getDescendantsOnly(selectedCategory);
+
+    const targetNames = new Set(
+      getDescendantsOnly(selectedCategory).flatMap(n => {
+        const list = [n];
+        if (n === 'stationery' || n === 'baby-stationery') list.push('baby stationery', 'stationery');
+        if (n === 'care & hygiene' || n === 'baby-care-hygiene') list.push('baby care & hygiene', 'care & hygiene', 'baby care and hygiene');
+        if (n === 'gear & travel' || n === 'gear-travel') list.push('gear & travel', 'gear &amp; travel', 'gear and travel');
+        if (n === 'furniture & bedding' || n === 'furniture-bedding') list.push('furniture & bedding', 'furniture &amp; bedding', 'furniture and bedding');
+        if (n === 'apparels') list.push("boy's fashion", "girl's fashion", "baby's fashion", 'apparels');
+        return list;
+      })
+    );
 
     return products.filter(p => {
-      const categoryMatch = selectedCategory === 'All' || p.category.some(c => filterCategories.includes(c));
-      return categoryMatch;
+      const prodCats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
+      return prodCats.some(c => targetNames.has(String(c).replace(/&amp;/g, '&').toLowerCase().trim()));
     });
   }, [products, categories, selectedCategory]);
 
