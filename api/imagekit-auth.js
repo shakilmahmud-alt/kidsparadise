@@ -2,17 +2,9 @@ import ImageKit from "imagekit";
 
 export default function handler(req, res) {
   try {
-    const publicKey = process.env.IMAGEKIT_PUBLIC_KEY || process.env.VITE_IMAGEKIT_PUBLIC_KEY;
-    const privateKey = process.env.IMAGEKIT_PRIVATE_KEY || process.env.VITE_IMAGEKIT_PRIVATE_KEY;
-    const urlEndpoint = process.env.IMAGEKIT_URL_ENDPOINT || process.env.VITE_IMAGEKIT_URL_ENDPOINT;
-
-    if (!publicKey || !privateKey || !urlEndpoint) {
-      const missing = [];
-      if (!publicKey) missing.push("IMAGEKIT_PUBLIC_KEY (or VITE_IMAGEKIT_PUBLIC_KEY)");
-      if (!privateKey) missing.push("IMAGEKIT_PRIVATE_KEY (or VITE_IMAGEKIT_PRIVATE_KEY)");
-      if (!urlEndpoint) missing.push("IMAGEKIT_URL_ENDPOINT (or VITE_IMAGEKIT_URL_ENDPOINT)");
-      throw new Error(`Missing environment variable(s) on Vercel: ${missing.join(", ")}. Please add them to your Vercel settings and redeploy.`);
-    }
+    const publicKey = process.env.IMAGEKIT_PUBLIC_KEY || process.env.VITE_IMAGEKIT_PUBLIC_KEY || 'public_2whN80fDWdIcfamm9JioaAVsZnM=';
+    const privateKey = process.env.IMAGEKIT_PRIVATE_KEY || process.env.VITE_IMAGEKIT_PRIVATE_KEY || 'private_qcl5XcdOncElqHM06FMJ3VpgO3o=';
+    const urlEndpoint = process.env.IMAGEKIT_URL_ENDPOINT || process.env.VITE_IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/vrtbi4wsn';
 
     const imagekit = new ImageKit({
       publicKey,
