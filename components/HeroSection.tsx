@@ -92,26 +92,26 @@ export const HeroSection: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
-  // Dynamic measurement to ensure 3 cards perfectly reach the right margin by default
-  const sliderViewportRef = useRef<HTMLDivElement>(null);
-  const [sliderWidth, setSliderWidth] = useState(0);
+  // Exact measurement of the inner container bounds
+  const headerRowRef = useRef<HTMLDivElement>(null);
+  const [innerContentWidth, setInnerContentWidth] = useState(0);
 
   useEffect(() => {
-    const measureWidth = () => {
-      if (sliderViewportRef.current) {
-        setSliderWidth(sliderViewportRef.current.clientWidth);
+    const measure = () => {
+      if (headerRowRef.current) {
+        setInnerContentWidth(headerRowRef.current.clientWidth);
       }
     };
-    measureWidth();
-    window.addEventListener('resize', measureWidth);
-    return () => window.removeEventListener('resize', measureWidth);
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
   }, []);
 
   const categoryTree = useMemo(() => {
     return buildCategoryTree(categories);
   }, [categories]);
 
-  // Order parent categories exactly: 1. Apparels, 2. Toys, 3. Gear & Travel, 4. Care & Hygiene, 5. Furniture & Bedding, 6. Stationery, 7. Mother Care, 8. Others
+  // Order parent categories: 1. Apparels, 2. Toys, 3. Gear & Travel, 4. Care & Hygiene, 5. Furniture & Bedding, 6. Stationery, 7. Mother Care, 8. Others
   const orderedParentCategories = useMemo(() => {
     const order = [
       'apparels',
@@ -140,7 +140,7 @@ export const HeroSection: React.FC = () => {
     return (brands || []).slice(0, 16);
   }, [brands]);
 
-  // 5 Crystal Clear Kids Paradise Product Banners
+  // 3 Primary Hero Banners in the creative sliding set
   const heroBanners = useMemo(() => [
     {
       id: 1,
@@ -150,7 +150,7 @@ export const HeroSection: React.FC = () => {
       subtitle: 'Smooth Suspension & Certified Safety',
       title: "Your Baby's Dream Ride",
       btnText: 'Shop Strollers',
-      btnBg: 'bg-[#F0264C]', // Main brand color #F0264C
+      btnBg: 'bg-[#F0264C]',
       link: '/category/gear-travel',
       image: 'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=800&q=95',
       bgColor: 'bg-[#c85a32]'
@@ -163,7 +163,7 @@ export const HeroSection: React.FC = () => {
       subtitle: 'Wireless Remote, LED Lights & Music',
       title: 'Smart Cars for Smart Kids',
       btnText: 'Explore Cars',
-      btnBg: 'bg-[#B81432]', // Deep version of #F0264C
+      btnBg: 'bg-[#B81432]',
       link: '/category/vehicles',
       image: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=800&q=95',
       bgColor: 'bg-[#5b6574]'
@@ -180,54 +180,43 @@ export const HeroSection: React.FC = () => {
       link: '/category/dolls-accessories',
       image: 'https://images.unsplash.com/photo-1558877385-81a1c7e67d72?auto=format&fit=crop&w=800&q=95',
       bgColor: 'bg-[#4a5568]'
-    },
-    {
-      id: 4,
-      badgeText: 'PREMIUM',
-      badgeColor: 'bg-[#FFE600] text-black',
-      tag: 'Newborn Feeding Essentials',
-      subtitle: 'BPA-Free Bottles & Mother Care Picks',
-      title: 'Baby Care Made Easy',
-      btnText: 'Shop Baby Care',
-      btnBg: 'bg-[#B81432]', // Deep version of #F0264C
-      link: '/category/feeding-nursing',
-      image: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=800&q=95',
-      bgColor: 'bg-[#0066cc]'
-    },
-    {
-      id: 5,
-      badgeText: 'BEST VALUE',
-      badgeColor: 'bg-emerald-500 text-white',
-      tag: 'Early Learning STEM Sets',
-      subtitle: 'Inspire Creativity & Brain Development',
-      title: 'Smart Learning Blocks',
-      btnText: 'Explore Blocks',
-      btnBg: 'bg-[#F0264C]',
-      link: '/category/blocks',
-      image: 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?auto=format&fit=crop&w=800&q=95',
-      bgColor: 'bg-[#4b5563]'
     }
   ], []);
 
-  // Calculate card width dynamically so 3 cards reach the exact right margin by default:
-  // Visible cards on desktop = 3. Gap = 16px. Total gaps = 2 * 16 = 32px.
-  // Card width = (sliderWidth - 32) / 3.
   const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
   const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
 
+  // The sidebar menu width is 270px + 16px gap = 286px.
+  // The available width for the 3 cards between the menu and the right margin is:
+  // availableWidth = innerContentWidth - 286px.
+  // Each card width = (availableWidth - 2 * 16px) / 3 = (availableWidth - 32) / 3.
   const cardWidth = useMemo(() => {
-    if (!sliderWidth) return 380;
+    if (!innerContentWidth) return 380;
     if (isDesktop) {
-      return (sliderWidth - 32) / 3;
+      const availableForCards = Math.max(0, innerContentWidth - 286);
+      return Math.floor((availableForCards - 32) / 3);
     }
     if (isTablet) {
-      return (sliderWidth - 16) / 2;
+      return Math.floor((innerContentWidth - 16) / 2);
     }
-    return sliderWidth;
-  }, [sliderWidth, isDesktop, isTablet]);
+    return innerContentWidth;
+  }, [innerContentWidth, isDesktop, isTablet]);
 
-  const slideStep = cardWidth + 16;
-  const maxSlide = Math.max(0, heroBanners.length - (isDesktop ? 3 : isTablet ? 2 : 1));
+  // Creative Sliding Mechanism (User Requested):
+  // Slide 0 (Image 1 / Default): translateX(0px).
+  // Cards 1, 2, 3 fill 100% of the space from the menu to the container right margin!
+  // Card 3 touches the RIGHT MARGIN with 0px gap!
+  // Slide 1 (Image 2 / Slid): translateX(-286px).
+  // The cards slide left by 286px underneath the "Shop by" menu.
+  // Card 1 touches the LEFT MARGIN (0px) under the menu, and the right side becomes 286px FAKA (EMPTY)!
+  const getTransformX = (slideIdx: number) => {
+    if (!isDesktop) {
+      return slideIdx * (cardWidth + 16);
+    }
+    return slideIdx === 0 ? 0 : 286;
+  };
+
+  const maxSlide = isDesktop ? 1 : 2;
 
   const nextSlide = () => {
     setCurrentSlide(prev => (prev >= maxSlide ? 0 : prev + 1));
@@ -241,7 +230,7 @@ export const HeroSection: React.FC = () => {
     if (isPaused) return;
     const interval = setInterval(() => {
       nextSlide();
-    }, 5500);
+    }, 6000);
     return () => clearInterval(interval);
   }, [isPaused, maxSlide]);
 
@@ -264,8 +253,8 @@ export const HeroSection: React.FC = () => {
     <section className="w-full bg-[#f8f9fa] pt-4 pb-8 md:pb-12 font-sans overflow-hidden">
       <div className="container mx-auto px-4 md:px-8">
 
-        {/* Top Header Row: "Shop by" Header (#F0264C) + Search Input */}
-        <div className="flex flex-col lg:flex-row items-stretch gap-4 mb-4">
+        {/* Top Header Row: "Shop by" Header (#F0264C) + Search Input (Defines exact container inner width) */}
+        <div ref={headerRowRef} className="flex flex-col lg:flex-row items-stretch gap-4 mb-4">
           
           {/* "Shop by" Header Box */}
           <div className="hidden lg:flex w-[270px] min-w-[270px] items-center justify-between bg-[#F0264C] text-white px-5 py-3.5 rounded-t-md font-bold tracking-tight shadow-sm flex-shrink-0">
@@ -534,14 +523,11 @@ export const HeroSection: React.FC = () => {
           </div>
 
           {/* 2. Sliding Track: Starts at pl-[286px]. Exactly 3 cards fill 100% of available width to the right margin! */}
-          <div 
-            ref={sliderViewportRef} 
-            className="w-full lg:pl-[286px] overflow-visible"
-          >
+          <div className="w-full lg:pl-[286px] overflow-visible">
             <div 
               className="flex transition-transform duration-700 ease-in-out gap-4 z-10"
               style={{
-                transform: `translateX(-${currentSlide * slideStep}px)`
+                transform: `translateX(-${getTransformX(currentSlide)}px)`
               }}
             >
               {heroBanners.map((banner) => (
