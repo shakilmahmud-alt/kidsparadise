@@ -502,7 +502,9 @@ export default async function handler(req, res) {
     // 12. Media Library CRUD
     if (path.startsWith('/api/media') || path.includes('/media')) {
       if (method === 'GET') {
-        const rows = await query('SELECT * FROM media ORDER BY id DESC LIMIT 300');
+        const rows = await query('SELECT * FROM media ORDER BY id DESC LIMIT 1000');
+        const countRes = await query('SELECT count(*) as total FROM media');
+        const totalCount = countRes[0]?.total || rows.length;
         const formattedMedia = rows.map(m => ({
           id: String(m.id),
           name: m.name,
@@ -511,7 +513,7 @@ export default async function handler(req, res) {
           size: Number(m.size || 0),
           createdAt: m.created_at
         }));
-        return res.status(200).json({ success: true, media: formattedMedia });
+        return res.status(200).json({ success: true, media: formattedMedia, total: totalCount });
       }
 
       if (method === 'POST') {

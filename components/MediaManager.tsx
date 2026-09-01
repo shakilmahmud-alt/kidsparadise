@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, Search, Copy, Check, Trash2, ExternalLink, Image as ImageIcon, 
-  FileText, RefreshCw, AlertCircle, Eye, X, HardDrive, CheckCircle2 
+  FileText, RefreshCw, AlertCircle, Eye, X, HardDrive, CheckCircle2, Film, Folder, Play
 } from 'lucide-react';
 import { MediaItem } from '../types';
 import { uploadToCpanel } from '../lib/cpanelUpload';
@@ -12,10 +12,12 @@ export const MediaManager: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'image' | 'other'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'image' | 'video' | 'products' | 'banners'>('all');
+  const [targetFolder, setTargetFolder] = useState<'media' | 'videos' | 'products' | 'banners'>('media');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [previewItem, setPreviewItem] = useState<MediaItem | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch all media items
@@ -30,7 +32,7 @@ export const MediaManager: React.FC = () => {
           setMediaList(data.media);
         }
       } else {
-        // Fallback directly to cPanel bridge if running locally or bridge
+        // Direct cPanel bridge fallback
         const bridgeRes = await fetch('https://kidsparadise.com.bd/api.php', {
           method: 'POST',
           headers: {
@@ -39,7 +41,7 @@ export const MediaManager: React.FC = () => {
           },
           body: JSON.stringify({
             action: 'query',
-            sql: 'SELECT * FROM media ORDER BY id DESC LIMIT 300'
+            sql: 'SELECT * FROM media ORDER BY id DESC LIMIT 1000'
           })
         });
         if (bridgeRes.ok) {
@@ -74,19 +76,23 @@ export const MediaManager: React.FC = () => {
 
     setIsUploading(true);
     setErrorMessage(null);
+    setSuccessMessage(null);
 
     const totalFiles = files.length;
-    let successfulUploads = 0;
+    let successfulCount = 0;
 
     for (let i = 0; i < totalFiles; i++) {
       const file = files[i];
-      setUploadProgress(`Uploading ${i + 1} of ${totalFiles}: ${file.name}...`);
+      const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|avi)$/i.test(file.name);
+      const effectiveFolder = isVideo ? 'videos' : targetFolder;
+
+      setUploadProgress(`Uploading ${i + 1} of ${totalFiles}: ${file.name} to cPanel /uploads/${effectiveFolder}/...`);
 
       try {
-        // 1. Upload file directly to cPanel hosting (with auto fallback)
-        const uploadedUrl = await uploadToCpanel(file, '/media');
+        // 1. Direct cPanel upload
+        const uploadedUrl = await uploadToCpanel(file, effectiveFolder);
 
-        // 2. Save metadata to MySQL media table
+        // 2. Save metadata in MySQL media table
         let savedItem: MediaItem | null = null;
         try {
           const saveRes = await fetch('/api/media', {
@@ -95,7 +101,7 @@ export const MediaManager: React.FC = () => {
             body: JSON.stringify({
               name: file.name,
               url: uploadedUrl,
-              fileType: file.type || 'image/jpeg',
+              fileType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
               size: file.size
             })
           });
@@ -113,8 +119,8 @@ export const MediaManager: React.FC = () => {
             },
             body: JSON.stringify({
               action: 'query',
-              sql: 'INSERT INTO media (name, url, file_type, size) VALUES (?, ?, ?, ?)',
-              params: [file.name, uploadedUrl, file.type || 'image/jpeg', file.size]
+              sql: 'INSERT INTO media (name, url, file_type, size, created_at) VALUES (?, ?, ?, ?, NOW())',
+              params: [file.name, uploadedUrl, file.type || (isVideo ? 'video/mp4' : 'image/jpeg'), file.size]
             })
           });
         }
@@ -123,22 +129,27 @@ export const MediaManager: React.FC = () => {
           id: String(Date.now() + i),
           name: file.name,
           url: uploadedUrl,
-          fileType: file.type || 'image/jpeg',
+          fileType: file.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
           size: file.size,
           createdAt: new Date().toISOString()
         };
 
         setMediaList(prev => [newItem, ...prev]);
-        successfulUploads++;
+        successfulCount++;
       } catch (err: any) {
         console.error(`Error uploading ${file.name}:`, err);
-        setErrorMessage(`Failed to upload ${file.name}: ${err.message}`);
+        setErrorMessage(`Upload failed for ${file.name}: ${err.message}`);
       }
     }
 
     setIsUploading(false);
     setUploadProgress('');
     if (fileInputRef.current) fileInputRef.current.value = '';
+
+    if (successfulCount > 0) {
+      setSuccessMessage(`Successfully uploaded ${successfulCount} file(s) directly to cPanel!`);
+      setTimeout(() => setSuccessMessage(null), 4000);
+    }
   };
 
   // Copy URL with clipboard feedback
@@ -150,11 +161,10 @@ export const MediaManager: React.FC = () => {
 
   // Delete media item
   const handleDeleteMedia = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this media item?')) return;
+    if (!window.confirm('Are you sure you want to remove this media record?')) return;
 
     try {
       await fetch(`/api/media?id=${id}`, { method: 'DELETE' });
-      // Direct bridge fallback as well
       await fetch('https://kidsparadise.com.bd/api.php', {
         method: 'POST',
         headers: {
@@ -176,7 +186,7 @@ export const MediaManager: React.FC = () => {
 
   // Format bytes into readable format
   const formatBytes = (bytes: number) => {
-    if (!bytes || bytes === 0) return 'Unknown';
+    if (!bytes || bytes === 0) return 'cPanel Asset';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -188,34 +198,41 @@ export const MediaManager: React.FC = () => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           item.url.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
-    if (selectedFilter === 'image') return item.fileType.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(item.url);
-    if (selectedFilter === 'other') return !item.fileType.startsWith('image/') && !/\.(jpg|jpeg|png|webp|gif|svg)$/i.test(item.url);
+
+    const isVideo = item.fileType.startsWith('video/') || /\.(mp4|webm|mov|avi)$/i.test(item.url);
+    const isImage = item.fileType.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(item.url);
+
+    if (selectedFilter === 'image') return isImage && !isVideo;
+    if (selectedFilter === 'video') return isVideo;
+    if (selectedFilter === 'products') return item.url.includes('/products/') || item.name.toLowerCase().includes('product');
+    if (selectedFilter === 'banners') return item.url.includes('/banners/') || item.url.includes('slide') || item.name.toLowerCase().includes('banner');
+
     return true;
   });
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 font-sans text-slate-800">
       
-      {/* Header & Storage Info */}
+      {/* Header & cPanel Storage Indicator */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 md:p-8 rounded-2xl border border-gray-100 shadow-sm">
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl md:text-3xl font-extrabold text-[#1d293f] tracking-tight">
-              Media Library & Uploads
+              cPanel Media Library
             </h2>
             <span className="bg-rose-50 text-[#F0264C] font-bold text-xs px-3 py-1 rounded-full border border-rose-100">
-              {mediaList.length} Files
+              {mediaList.length} cPanel Files
             </span>
           </div>
           <p className="text-sm text-gray-500 mt-1">
-            Upload images, banners, logos, and documents to cloud storage and easily copy their URLs for use anywhere.
+            Upload files directly to your cPanel hosting (<code className="text-xs bg-gray-100 px-1 py-0.5 rounded font-mono">/public_html/uploads/</code>) and access all existing assets.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-3.5 py-2 rounded-xl text-xs font-semibold">
             <HardDrive size={15} className="text-emerald-600" />
-            <span>High-Speed Global CDN Storage Active</span>
+            <span>Direct cPanel Server Storage Active</span>
           </div>
 
           <button
@@ -229,13 +246,40 @@ export const MediaManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Upload Dropzone Box */}
-      <div className="bg-white border-2 border-dashed border-rose-200 hover:border-[#F0264C] rounded-2xl p-8 text-center transition-all bg-rose-50/20 group">
+      {/* Target Folder Selector & Upload Dropzone */}
+      <div className="bg-white border-2 border-dashed border-rose-200 hover:border-[#F0264C] rounded-2xl p-8 text-center transition-all bg-rose-50/20 group space-y-6">
+        
+        {/* Destination Folder Selector */}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <span className="text-xs font-bold text-gray-600 flex items-center gap-1.5 mr-2">
+            <Folder size={14} className="text-[#F0264C]" /> Destination cPanel Folder:
+          </span>
+          {[
+            { id: 'media', label: '/uploads/media/' },
+            { id: 'products', label: '/uploads/products/' },
+            { id: 'videos', label: '/uploads/videos/' },
+            { id: 'banners', label: '/uploads/banners/' }
+          ].map(f => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setTargetFolder(f.id as any)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer font-mono ${
+                targetFolder === f.id
+                  ? 'bg-[#F0264C] text-white shadow-xs'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         <input
           ref={fileInputRef}
           type="file"
           multiple
-          accept="image/*,.pdf,.doc,.docx,.mp4,.webm"
+          accept="image/*,video/*,.mp4,.webm,.mov,.avi,.pdf,.doc,.docx,.xlsx"
           className="hidden"
           onChange={(e) => handleFileUpload(e.target.files)}
         />
@@ -251,10 +295,10 @@ export const MediaManager: React.FC = () => {
 
           <div>
             <h4 className="text-lg font-bold text-gray-800">
-              {isUploading ? 'Uploading Files...' : 'Drag & drop files here, or browse from computer'}
+              {isUploading ? 'Uploading to cPanel...' : 'Drag & drop files here, or browse from computer'}
             </h4>
             <p className="text-xs text-gray-500 mt-1">
-              Supports JPG, PNG, WEBP, GIF, SVG, PDF, and videos. Files are instantly optimized and served via CDN.
+              Supports Images (JPG, PNG, WEBP, GIF, SVG), Videos (MP4, WEBM, MOV), and PDFs.
             </p>
             {uploadProgress && (
               <p className="text-xs font-bold text-[#F0264C] mt-2 animate-pulse">
@@ -269,10 +313,19 @@ export const MediaManager: React.FC = () => {
             onClick={() => fileInputRef.current?.click()}
             className="px-6 py-2.5 bg-[#F0264C] hover:bg-[#d01c3f] text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer inline-flex items-center gap-2"
           >
-            <Upload size={14} /> Browse Files to Upload
+            <Upload size={14} /> Browse & Upload to cPanel
           </button>
         </div>
       </div>
+
+      {/* Success Alert */}
+      {successMessage && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl flex items-center gap-3 text-xs animate-in fade-in">
+          <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
+          <span className="font-semibold">{successMessage}</span>
+          <button onClick={() => setSuccessMessage(null)} className="ml-auto text-emerald-600 hover:text-emerald-900"><X size={14} /></button>
+        </div>
+      )}
 
       {/* Error Alert */}
       {errorMessage && (
@@ -290,7 +343,7 @@ export const MediaManager: React.FC = () => {
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search media files by name..."
+            placeholder="Search cPanel media files by name or URL..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-[#F0264C] focus:bg-white transition-all"
@@ -300,9 +353,11 @@ export const MediaManager: React.FC = () => {
         {/* Filter Buttons */}
         <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
           {[
-            { id: 'all', label: 'All Files' },
+            { id: 'all', label: 'All cPanel Files' },
             { id: 'image', label: 'Images' },
-            { id: 'other', label: 'Documents & Others' }
+            { id: 'video', label: 'Videos' },
+            { id: 'products', label: 'Products' },
+            { id: 'banners', label: 'Banners' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -323,18 +378,19 @@ export const MediaManager: React.FC = () => {
       {isLoading ? (
         <div className="bg-white rounded-2xl p-16 text-center border border-gray-100 shadow-xs">
           <RefreshCw size={32} className="animate-spin text-[#F0264C] mx-auto mb-3" />
-          <p className="text-sm font-semibold text-gray-500">Loading your media library...</p>
+          <p className="text-sm font-semibold text-gray-500">Loading all cPanel media files...</p>
         </div>
       ) : filteredList.length === 0 ? (
         <div className="bg-white rounded-2xl p-16 text-center border border-gray-100 shadow-xs">
           <ImageIcon size={40} className="text-gray-300 mx-auto mb-3" />
           <h4 className="text-base font-bold text-gray-700">No media files found</h4>
-          <p className="text-xs text-gray-400 mt-1">Upload your first image or try a different search keyword.</p>
+          <p className="text-xs text-gray-400 mt-1">Upload your first file to cPanel or try another search keyword.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {filteredList.map((item) => {
-            const isImage = item.fileType.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(item.url);
+            const isVideo = item.fileType.startsWith('video/') || /\.(mp4|webm|mov|avi)$/i.test(item.url);
+            const isImage = (item.fileType.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(item.url)) && !isVideo;
             const isCopied = copiedId === item.id;
 
             return (
@@ -347,7 +403,17 @@ export const MediaManager: React.FC = () => {
                   className="relative h-36 bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer"
                   onClick={() => setPreviewItem(item)}
                 >
-                  {isImage ? (
+                  {isVideo ? (
+                    <div className="relative w-full h-full bg-slate-900 flex items-center justify-center text-white">
+                      <Film size={36} className="text-rose-400 opacity-80" />
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                        <div className="w-9 h-9 rounded-full bg-white/30 backdrop-blur-xs flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Play size={16} className="text-white fill-white ml-0.5" />
+                        </div>
+                      </div>
+                      <span className="absolute bottom-2 right-2 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">VIDEO</span>
+                    </div>
+                  ) : isImage ? (
                     <img
                       src={item.url}
                       alt={item.name}
@@ -391,7 +457,7 @@ export const MediaManager: React.FC = () => {
                       {item.name}
                     </h5>
                     <p className="text-[10px] text-gray-400 mt-0.5 flex items-center justify-between">
-                      <span>{item.size > 0 ? formatBytes(item.size) : 'CDN Asset'}</span>
+                      <span className="truncate max-w-[90px]">{formatBytes(item.size)}</span>
                       {item.createdAt && (
                         <span>{new Date(item.createdAt).toLocaleDateString()}</span>
                       )}
@@ -408,7 +474,7 @@ export const MediaManager: React.FC = () => {
                           ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
                           : 'bg-rose-50 hover:bg-[#F0264C] text-[#F0264C] hover:text-white border border-rose-100'
                       }`}
-                      title="Copy Public URL"
+                      title="Copy Public cPanel URL"
                     >
                       {isCopied ? (
                         <>
@@ -425,7 +491,7 @@ export const MediaManager: React.FC = () => {
                       type="button"
                       onClick={() => handleDeleteMedia(item.id)}
                       className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                      title="Delete file"
+                      title="Delete record"
                     >
                       <Trash2 size={13} />
                     </button>
@@ -448,7 +514,7 @@ export const MediaManager: React.FC = () => {
                   {previewItem.name}
                 </h3>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Uploaded on {new Date(previewItem.createdAt).toLocaleString()}
+                  cPanel File &bull; {previewItem.createdAt ? new Date(previewItem.createdAt).toLocaleString() : 'Uploaded Asset'}
                 </p>
               </div>
               <button 
@@ -461,7 +527,13 @@ export const MediaManager: React.FC = () => {
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto flex-1 flex flex-col items-center justify-center bg-gray-50/50">
-              {previewItem.fileType.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(previewItem.url) ? (
+              {previewItem.fileType.startsWith('video/') || /\.(mp4|webm|mov|avi)$/i.test(previewItem.url) ? (
+                <video
+                  src={previewItem.url}
+                  controls
+                  className="max-h-[380px] w-full rounded-xl shadow-md bg-black"
+                />
+              ) : previewItem.fileType.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(previewItem.url) ? (
                 <img
                   src={previewItem.url}
                   alt={previewItem.name}
@@ -477,7 +549,7 @@ export const MediaManager: React.FC = () => {
               {/* URL Box */}
               <div className="w-full mt-6 bg-white p-3.5 rounded-2xl border border-gray-200 shadow-2xs space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-gray-600">
-                  <span>Public Asset URL</span>
+                  <span>Direct cPanel Public URL</span>
                   <span className="text-emerald-600 flex items-center gap-1 font-semibold text-[11px]">
                     <CheckCircle2 size={12} /> Ready to use
                   </span>
@@ -502,7 +574,7 @@ export const MediaManager: React.FC = () => {
                     target="_blank"
                     rel="noreferrer"
                     className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors cursor-pointer"
-                    title="Open original"
+                    title="Open in new tab"
                   >
                     <ExternalLink size={14} />
                   </a>
