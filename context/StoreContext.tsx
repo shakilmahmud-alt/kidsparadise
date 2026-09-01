@@ -113,9 +113,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     },
     {
       id: 'popular-items',
-      title: "Popular Items",
+      title: "Toys",
       type: 'grid',
-      filterType: 'all',
+      filterType: 'category',
+      filterValue: 'Toys',
       sortOrder: 2,
       isActive: true
     }

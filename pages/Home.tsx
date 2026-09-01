@@ -8,6 +8,7 @@ import { ArrowRight, Truck, Headphones, ShieldCheck, Award, ShoppingBag, CreditC
 import ProductCard from '../components/ProductCard';
 import HeroSection from '../components/HeroSection';
 import CategorySlider from '../components/CategorySlider';
+import ToysShowcase from '../components/ToysShowcase';
 import { useStore } from '../context/StoreContext';
 import { HomeSection, Product, Brand } from '../types';
 
@@ -931,6 +932,8 @@ const Home: React.FC = () => {
                 </div>
               </section>
             );
+          } else if (section.id === 'popular-items' || section.title.toLowerCase().includes('popular') || section.title.toLowerCase().includes('toys')) {
+            sectionContent = <ToysShowcase key={section.id} />;
           } else if (section.type === 'slider') {
             sectionContent = <SliderSection key={section.id} section={section} products={items} />;
           } else if (section.type === 'grid' || section.type === 'grid-no-banner') {
