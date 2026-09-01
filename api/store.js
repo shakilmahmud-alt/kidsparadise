@@ -476,6 +476,49 @@ export default async function handler(req, res) {
       }
     }
 
+    // 12. Media Library CRUD
+    if (path.startsWith('/api/media') || path.includes('/media')) {
+      if (method === 'GET') {
+        const rows = await query('SELECT * FROM media ORDER BY id DESC LIMIT 300');
+        const formattedMedia = rows.map(m => ({
+          id: String(m.id),
+          name: m.name,
+          url: m.url,
+          fileType: m.file_type || 'image/jpeg',
+          size: Number(m.size || 0),
+          createdAt: m.created_at
+        }));
+        return res.status(200).json({ success: true, media: formattedMedia });
+      }
+
+      if (method === 'POST') {
+        const { name, url, fileType, size } = req.body;
+        const result = await query(
+          'INSERT INTO media (name, url, file_type, size) VALUES (?, ?, ?, ?)',
+          [name || 'Media Upload', url, fileType || 'image/jpeg', Number(size || 0)]
+        );
+        return res.status(201).json({
+          success: true,
+          media: {
+            id: String(result.insertId),
+            name: name || 'Media Upload',
+            url,
+            fileType: fileType || 'image/jpeg',
+            size: Number(size || 0),
+            createdAt: new Date().toISOString()
+          }
+        });
+      }
+
+      if (method === 'DELETE') {
+        const id = req.query?.id || req.body?.id || path.split('/').pop();
+        if (id) {
+          await query('DELETE FROM media WHERE id = ?', [id]);
+        }
+        return res.status(200).json({ success: true });
+      }
+    }
+
     return res.status(404).json({ error: 'Store endpoint not found' });
   } catch (error) {
     console.warn('Store API Handler Notice (DB Connection):', error.message);

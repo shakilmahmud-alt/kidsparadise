@@ -150,7 +150,7 @@ export const Header: React.FC = () => {
         <div className="bg-[#F0264C] text-white text-xs py-2 px-4 relative flex items-center justify-between z-50">
           <div className="container mx-auto flex items-center justify-center gap-2 font-medium tracking-wide">
             <span className="bg-white/20 px-2 py-0.5 rounded text-[11px] font-bold uppercase">Special Offer</span>
-            <span>FREE Shipping across Bangladesh on orders over ৳2,999! 🚚</span>
+            <span>Order online & get 10% Discount!</span>
           </div>
           <button 
             onClick={() => setShowTopBar(false)} 

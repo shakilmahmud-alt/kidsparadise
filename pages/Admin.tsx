@@ -16,6 +16,7 @@ import RichTextEditor from '../components/RichTextEditor';
 import { DISTRICT_AREA_DATA } from '../constants';
 import ProductImageUpload from '../components/ProductImageUpload';
 import { uploadToImageKit } from '../lib/imagekit';
+import MediaManager from '../components/MediaManager';
 
 
 
@@ -1603,6 +1604,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
             { id: 'reviews', icon: MessageSquare, label: 'Reviews' },
             { id: 'pages', icon: FileText, label: 'Pages' },
             { id: 'banners', icon: ImageIcon, label: 'Banners' },
+            { id: 'media', icon: Upload, label: 'Media Library' },
             { id: 'users', icon: UsersIcon, label: 'Users & Roles' },
             { id: 'settings', icon: SettingsIcon, label: 'System' },
             { id: 'reports', icon: BarChart3, label: 'Reports' },
@@ -1617,6 +1619,8 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
       </aside>
 
       <main className="flex-1 p-10">
+        {adminTab === 'media' && <MediaManager />}
+
         {adminTab === 'layout' && (
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex justify-between items-center">

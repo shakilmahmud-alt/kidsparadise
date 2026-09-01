@@ -206,3 +206,13 @@ export interface BlogPost {
   slug: string;
   tags: string[];
 }
+
+export interface MediaItem {
+  id: string;
+  name: string;
+  url: string;
+  fileType: string;
+  size: number;
+  createdAt: string;
+}
+
