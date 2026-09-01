@@ -433,65 +433,71 @@ export const HeroSection: React.FC = () => {
               onMouseEnter={() => setActiveCategory(activeCategory)}
               onMouseLeave={() => setActiveCategory(null)}
             >
-              <div className="w-full h-full bg-white rounded-[20px] shadow-2xl p-8 border border-gray-200/80 flex flex-col">
-              {/* Flyout Header */}
-              <div className="flex items-center justify-between pb-4 mb-6 border-b border-gray-100 flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#F0264C] flex items-center justify-center">
-                    {getMainCategoryIcon(activeCategory.name)}
+              <div className="w-full h-full bg-white rounded-[20px] shadow-2xl p-8 border border-gray-200/80 flex flex-col overflow-hidden">
+                {/* Flyout Header */}
+                <div className="flex items-center justify-between pb-4 mb-5 border-b border-gray-100 flex-shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#F0264C] flex items-center justify-center">
+                      {getMainCategoryIcon(activeCategory.name)}
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold text-xl text-[#1d293f] leading-tight">
+                        {activeCategory.name.replace(/&amp;/g, '&')}
+                      </h3>
+                      <p className="text-xs text-gray-400">Explore all collections and subcategories</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-extrabold text-xl text-[#1d293f] leading-tight">
-                      {activeCategory.name.replace(/&amp;/g, '&')}
-                    </h3>
-                    <p className="text-xs text-gray-400">Explore all collections and subcategories</p>
-                  </div>
+
+                  <Link 
+                    to={`/category/${activeCategory.slug || encodeURIComponent(activeCategory.name)}`}
+                    className="px-5 py-2 rounded-lg bg-rose-50 hover:bg-[#F0264C] text-[#F0264C] hover:text-white font-bold text-xs transition-all flex items-center gap-2 shadow-sm"
+                    onClick={() => setActiveCategory(null)}
+                  >
+                    View All Products <ArrowRight size={14} />
+                  </Link>
                 </div>
 
-                <Link 
-                  to={`/category/${activeCategory.slug || encodeURIComponent(activeCategory.name)}`}
-                  className="px-5 py-2 rounded-lg bg-rose-50 hover:bg-[#F0264C] text-[#F0264C] hover:text-white font-bold text-xs transition-all flex items-center gap-2 shadow-sm"
-                  onClick={() => setActiveCategory(null)}
+                {/* Fully Scrollable Multi-Column Grid of Sub-Categories and Sub-Sub-Categories */}
+                <div 
+                  className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-3"
+                  style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}
+                  onWheel={(e) => e.stopPropagation()}
                 >
-                  View All Products <ArrowRight size={14} />
-                </Link>
-              </div>
+                  <div className="grid grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-6 pb-8">
+                    {activeCategory.children.map(subCat => (
+                      <div key={subCat.id} className="space-y-2.5">
+                        <Link
+                          to={`/category/${subCat.slug || encodeURIComponent(subCat.name)}`}
+                          className="font-bold text-[14.5px] text-[#1d293f] hover:text-[#0072CE] transition-colors flex items-center justify-between border-b border-gray-100 pb-1.5 group/sub"
+                          onClick={() => setActiveCategory(null)}
+                        >
+                          <span className="truncate">{subCat.name.replace(/&amp;/g, '&')}</span>
+                          {subCat.children && subCat.children.length > 0 && (
+                            <span className="text-[11px] text-gray-400 font-medium group-hover/sub:text-[#0072CE]">
+                              ({subCat.children.length})
+                            </span>
+                          )}
+                        </Link>
 
-              {/* Multi-Column Grid of Sub-Categories and Sub-Sub-Categories */}
-              <div className="grid grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-6 overflow-y-auto max-h-[420px] pr-3 custom-scrollbar">
-                {activeCategory.children.map(subCat => (
-                  <div key={subCat.id} className="space-y-2.5">
-                    <Link
-                      to={`/category/${subCat.slug || encodeURIComponent(subCat.name)}`}
-                      className="font-bold text-[14.5px] text-[#1d293f] hover:text-[#0072CE] transition-colors flex items-center justify-between border-b border-gray-100 pb-1.5 group/sub"
-                      onClick={() => setActiveCategory(null)}
-                    >
-                      <span className="truncate">{subCat.name.replace(/&amp;/g, '&')}</span>
-                      {subCat.children && subCat.children.length > 0 && (
-                        <span className="text-[11px] text-gray-400 font-medium group-hover/sub:text-[#0072CE]">
-                          ({subCat.children.length})
-                        </span>
-                      )}
-                    </Link>
-
-                    {subCat.children && subCat.children.length > 0 && (
-                      <ul className="space-y-1.5 pl-1">
-                        {subCat.children.map(subSubCat => (
-                          <li key={subSubCat.id}>
-                            <Link
-                              to={`/category/${subSubCat.slug || encodeURIComponent(subSubCat.name)}`}
-                              className="text-xs text-gray-600 hover:text-[#0072CE] transition-colors flex items-center gap-2 hover:translate-x-1 duration-150 py-0.5"
-                              onClick={() => setActiveCategory(null)}
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
-                              <span className="truncate">{subSubCat.name.replace(/&amp;/g, '&')}</span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                        {subCat.children && subCat.children.length > 0 && (
+                          <ul className="space-y-1.5 pl-1">
+                            {subCat.children.map(subSubCat => (
+                              <li key={subSubCat.id}>
+                                <Link
+                                  to={`/category/${subSubCat.slug || encodeURIComponent(subSubCat.name)}`}
+                                  className="text-xs text-gray-600 hover:text-[#0072CE] transition-colors flex items-center gap-2 hover:translate-x-1 duration-150 py-0.5"
+                                  onClick={() => setActiveCategory(null)}
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                                  <span className="truncate">{subSubCat.name.replace(/&amp;/g, '&')}</span>
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))}
                 </div>
               </div>
             </div>
@@ -504,64 +510,70 @@ export const HeroSection: React.FC = () => {
               onMouseEnter={() => setIsHoveringBrands(true)}
               onMouseLeave={() => setIsHoveringBrands(false)}
             >
-              <div className="w-full h-full bg-white rounded-[20px] shadow-2xl p-8 border border-gray-200/80 flex flex-col">
-              {/* Flyout Header with Live Search */}
-              <div className="flex items-center justify-between pb-4 mb-5 border-b border-gray-100 flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#F0264C] flex items-center justify-center">
-                    <Award size={20} />
+              <div className="w-full h-full bg-white rounded-[20px] shadow-2xl p-8 border border-gray-200/80 flex flex-col overflow-hidden">
+                {/* Flyout Header with Live Search */}
+                <div className="flex items-center justify-between pb-4 mb-5 border-b border-gray-100 flex-shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#F0264C] flex items-center justify-center">
+                      <Award size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold text-xl text-[#1d293f] leading-tight flex items-center gap-2">
+                        Official Brands
+                        <span className="text-xs font-bold text-[#F0264C] bg-rose-50 px-2 py-0.5 rounded-full">
+                          {allBrands.length} Brands
+                        </span>
+                      </h3>
+                      <p className="text-xs text-gray-400">Click any brand to filter and view all its authentic products</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-extrabold text-xl text-[#1d293f] leading-tight flex items-center gap-2">
-                      Official Brands
-                      <span className="text-xs font-bold text-[#F0264C] bg-rose-50 px-2 py-0.5 rounded-full">
-                        {allBrands.length} Brands
-                      </span>
-                    </h3>
-                    <p className="text-xs text-gray-400">Click any brand to filter and view all its authentic products</p>
+
+                  <div className="flex items-center gap-4">
+                    {/* Real-Time Brand Search Input */}
+                    <div className="relative w-[220px]">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search brands..."
+                        value={brandSearch}
+                        onChange={(e) => setBrandSearch(e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 bg-gray-50 hover:bg-gray-100 focus:bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-[#F0264C] transition-all"
+                      />
+                    </div>
+
+                    <Link 
+                      to="/products"
+                      className="px-5 py-2 rounded-lg bg-rose-50 hover:bg-[#F0264C] text-[#F0264C] hover:text-white font-bold text-xs transition-all flex items-center gap-2 shadow-sm"
+                      onClick={() => setIsHoveringBrands(false)}
+                    >
+                      View All <ArrowRight size={14} />
+                    </Link>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  {/* Real-Time Brand Search Input */}
-                  <div className="relative w-[220px]">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search brands..."
-                      value={brandSearch}
-                      onChange={(e) => setBrandSearch(e.target.value)}
-                      className="w-full pl-8 pr-3 py-1.5 bg-gray-50 hover:bg-gray-100 focus:bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-[#F0264C] transition-all"
-                    />
+                {/* Fully Scrollable Grid of All 79 Attribute Brands */}
+                <div 
+                  className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-2"
+                  style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 transparent' }}
+                  onWheel={(e) => e.stopPropagation()}
+                >
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 pb-8">
+                    {filteredBrands.map((b) => (
+                      <Link
+                        key={b.id || b.value}
+                        to={`/products?brand=${encodeURIComponent(b.value)}&attr_Brands=${encodeURIComponent(b.value)}`}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 hover:bg-rose-50 border border-gray-100 hover:border-[#F0264C] text-[12.5px] font-semibold text-gray-700 hover:text-[#F0264C] transition-all group shadow-2xs truncate"
+                        onClick={() => setIsHoveringBrands(false)}
+                      >
+                        <Tag size={13} className="text-gray-400 group-hover:text-[#F0264C] transition-colors flex-shrink-0" />
+                        <span className="truncate">{b.value}</span>
+                      </Link>
+                    ))}
                   </div>
-
-                  <Link 
-                    to="/products"
-                    className="px-5 py-2 rounded-lg bg-rose-50 hover:bg-[#F0264C] text-[#F0264C] hover:text-white font-bold text-xs transition-all flex items-center gap-2 shadow-sm"
-                    onClick={() => setIsHoveringBrands(false)}
-                  >
-                    View All <ArrowRight size={14} />
-                  </Link>
                 </div>
-              </div>
-
-              {/* Grid of All 79 Attribute Brands */}
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 overflow-y-auto max-h-[415px] pr-2 custom-scrollbar">
-                {filteredBrands.map((b) => (
-                  <Link
-                    key={b.id || b.value}
-                    to={`/products?brand=${encodeURIComponent(b.value)}&attr_Brands=${encodeURIComponent(b.value)}`}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 hover:bg-rose-50 border border-gray-100 hover:border-[#F0264C] text-[12.5px] font-semibold text-gray-700 hover:text-[#F0264C] transition-all group shadow-2xs truncate"
-                    onClick={() => setIsHoveringBrands(false)}
-                  >
-                    <Tag size={13} className="text-gray-400 group-hover:text-[#F0264C] transition-colors flex-shrink-0" />
-                    <span className="truncate">{b.value}</span>
-                  </Link>
-                ))}
               </div>
             </div>
-          </div>
-        )}
+          )}
 
           {/* 4. Sliding Track: Starts next to menu (left: 286px) and slides UNDER menu */}
           <div className="w-full lg:pl-[286px] overflow-visible">
