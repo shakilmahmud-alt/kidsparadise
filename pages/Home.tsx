@@ -9,6 +9,7 @@ import ProductCard from '../components/ProductCard';
 import HeroSection from '../components/HeroSection';
 import CategorySlider from '../components/CategorySlider';
 import ToysShowcase from '../components/ToysShowcase';
+import GearTravelShowcase from '../components/GearTravelShowcase';
 import { useStore } from '../context/StoreContext';
 import { HomeSection, Product, Brand } from '../types';
 
@@ -933,7 +934,12 @@ const Home: React.FC = () => {
               </section>
             );
           } else if (section.id === 'popular-items' || section.title.toLowerCase().includes('popular') || section.title.toLowerCase().includes('toys')) {
-            sectionContent = <ToysShowcase key={section.id} />;
+            sectionContent = (
+              <React.Fragment key={section.id}>
+                <ToysShowcase />
+                <GearTravelShowcase />
+              </React.Fragment>
+            );
           } else if (section.type === 'slider') {
             sectionContent = <SliderSection key={section.id} section={section} products={items} />;
           } else if (section.type === 'grid' || section.type === 'grid-no-banner') {
@@ -952,31 +958,6 @@ const Home: React.FC = () => {
 
           return sectionContent;
         })}
-
-      {/* Best Items for you Section */}
-      <section className="best-items-container container mx-auto px-4 md:px-8 mb-6 md:mb-16">
-        <div className="flex justify-between items-end mb-6">
-          <h2 className="text-lg md:text-2xl font-bold text-gray-800 border-l-4 border-[#e92c5d] pl-4">Best Items for you</h2>
-          <Link to="/products" className="text-[10px] md:text-sm font-bold text-[#e92c5d] flex items-center gap-1 hover:gap-2 transition-all uppercase tracking-tighter">View All Items <ArrowRight size={14} /></Link>
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-6">
-          {loading ? (
-            Array.from({ length: 10 }).map((_, i) => (
-              <div key={`best-skeleton-${i}`} className="border border-gray-100 rounded-xl bg-white overflow-hidden p-4 space-y-4 animate-pulse max-w-[260px] mx-auto w-full">
-                <div className="aspect-square w-full bg-slate-100 rounded-lg"></div>
-                <div className="h-4 bg-slate-100 rounded w-2/3"></div>
-                <div className="h-6 bg-slate-100 rounded w-1/3"></div>
-              </div>
-            ))
-          ) : (
-            randomProducts.map(product => (
-              <ProductCard key={`best-${product.id}`} product={product} className="product-card-anim max-w-[260px] mx-auto w-full" />
-            ))
-          )}
-        </div>
-      </section>
-
-      <BrandScroller brands={brands} />
 
     </div>
   );
