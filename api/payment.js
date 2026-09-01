@@ -34,7 +34,7 @@ export default async function handler(req, res) {
         ipn_url: `${baseUrl}/api/payment-ipn`,
 
         shipping_method: 'Courier',
-        product_name: 'Zerobaby Store Products',
+        product_name: 'Kids Paradise Store Products',
         product_category: 'Baby Care & Toys',
         product_profile: 'general',
         cus_name: customerName || 'Customer',

@@ -10,30 +10,30 @@ export default defineConfig({
   registerType: 'autoUpdate',
   includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
   manifest: {
-    name: 'Zerobaby',
-    short_name: 'Zerobaby',
-    description: 'Zerobaby E-commerce Store',
-    theme_color: '#e92c5d',
+    name: 'Kids Paradise',
+    short_name: 'Kids Paradise',
+    description: 'Kids Paradise E-commerce Store',
+    theme_color: '#F0264C',
     background_color: '#ffffff',
     display: 'standalone',
     start_url: '/',
     scope: '/',
     orientation: 'portrait',
     categories: ['shopping', 'lifestyle'],
-    id: 'https://zerobaby.com.bd/',
+    id: 'https://kidsparadise.com.bd/',
     icons: [
-  {
-    src: 'https://ik.imagekit.io/vrtbi4wsn/store/zerobaby-icon-192.png',
-    sizes: '192x192',
-    type: 'image/png'
-  },
-  {
-    src: 'https://ik.imagekit.io/vrtbi4wsn/store/zerobaby-icon-512.png',
-    sizes: '512x512',
-    type: 'image/png',
-    purpose: 'any maskable'
-  }
-],
+      {
+        src: 'https://kidsparadise.com.bd/wp-content/uploads/2026/08/kp-logo-1.1.png',
+        sizes: '192x192',
+        type: 'image/png'
+      },
+      {
+        src: 'https://kidsparadise.com.bd/wp-content/uploads/2026/08/kp-logo-1.1.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any maskable'
+      }
+    ],
     screenshots: [
       {
         src: 'https://ik.imagekit.io/vrtbi4wsn/store/screenshot-wide-1280.png',

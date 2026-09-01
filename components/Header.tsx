@@ -368,15 +368,14 @@ export const Header: React.FC = () => {
               />
             </Link>
 
-            {/* Sticky "Shop by" Menu Button */}
+            {/* Sticky Menu Button (Icon Only) */}
             <div className="relative">
               <button
                 onClick={() => setIsStickyMenuOpen(!isStickyMenuOpen)}
-                className="flex items-center gap-1.5 bg-[#F0264C] text-white hover:bg-[#d01c3f] px-3.5 py-2 rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer select-none active:scale-95"
+                className="flex items-center justify-center bg-[#F0264C] text-white hover:bg-[#d01c3f] p-2 md:px-2.5 rounded-lg shadow-xs transition-all cursor-pointer select-none active:scale-95"
                 title="Shop by Category"
               >
-                <Menu size={16} strokeWidth={2.5} />
-                <span className="hidden sm:inline">Shop by</span>
+                <Menu size={18} strokeWidth={2.5} />
               </button>
 
               {/* Sticky "Shop by" Dropdown Menu (Exact Replica of Reference Image 2) */}

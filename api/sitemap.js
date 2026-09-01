@@ -23,7 +23,7 @@ export default async function sitemapHandler(req, res) {
       });
     };
 
-    const baseUrl = 'https://www.zerobaby.com.bd';
+    const baseUrl = 'https://kidsparadise.com.bd';
 
     const urls = [
       { loc: `${baseUrl}/`, priority: '1.0' },

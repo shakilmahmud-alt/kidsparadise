@@ -78,7 +78,7 @@ const Login: React.FC = () => {
             <User size={32} />
           </div>
           <h2 className="mt-6 text-3xl font-black text-gray-900 tracking-tight">
-            {isLogin ? 'Welcome Back!' : 'Join zerobaby'}
+            {isLogin ? 'Welcome Back!' : 'Join Kids Paradise'}
           </h2>
           <p className="mt-2 text-sm text-gray-500 font-medium">
             {isLogin ? 'Log in to access your orders and profile.' : 'Create an account to start shopping fresh!'}

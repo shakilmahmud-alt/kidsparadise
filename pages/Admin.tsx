@@ -257,7 +257,7 @@ const Admin: React.FC = () => {
     }
   };
 
-  const SQL_SCHEMA = `-- zerobaby Super Admin Schema (V7)
+  const SQL_SCHEMA = `-- Kids Paradise Super Admin Schema (V7)
 -- This script FIXES RLS "violate policy" errors for orders, wishlist, and addresses.
 -- SAFE to run multiple times. Data stays intact.
 
@@ -1508,10 +1508,10 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
         <body>
           <div class="header">
             <div class="company">
-              <img src="${currentStoreInfo?.logo_url || 'https://ik.imagekit.io/vrtbi4wsn/store/zerobaby-logo_a9UGaRrto.png'}" alt="Zero Baby Logo" />
+              <img src="${currentStoreInfo?.logo_url || 'https://kidsparadise.com.bd/wp-content/uploads/2026/08/kp-logo-1.1.png'}" alt="Kids Paradise Logo" />
               <p><strong>Address:</strong> ${currentStoreInfo?.address || 'Pallabi Mirpur 11.5 Bus Stand Mirpur, Dhaka-1216'}</p>
               <p><strong>Mobile:</strong> ${currentStoreInfo?.phone || '01797007260'}</p>
-              <p><strong>Email:</strong> ${currentStoreInfo?.email || 'zerobaby2021@gmail.com'}</p>
+              <p><strong>Email:</strong> ${currentStoreInfo?.email || 'support@kidsparadise.com.bd'}</p>
             </div>
             <div class="invoice-details">
               <h2>INVOICE</h2>
@@ -1560,7 +1560,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
           </div>
           
           <div class="invoice-footer">
-            <span>www.zerobaby.com.bd</span>
+            <span>www.kidsparadise.com.bd</span>
             <span>Thank you for shopping with us!</span>
           </div>
           

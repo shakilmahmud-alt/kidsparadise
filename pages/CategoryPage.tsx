@@ -110,13 +110,13 @@ const CategoryPage: React.FC = () => {
   // Set page title for SEO
   useEffect(() => {
     if (currentCategory) {
-      document.title = `${currentCategory.name} | Zero Baby`;
+      document.title = `${currentCategory.name} | Kids Paradise`;
     } else {
-      document.title = 'Category | Zero Baby';
+      document.title = 'Category | Kids Paradise';
     }
 
     return () => {
-      document.title = 'Zero Baby - A Branded Dream World for your Children';
+      document.title = 'Kids Paradise - A Branded Dream World for your Children';
     };
   }, [currentCategory]);
 

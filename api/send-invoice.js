@@ -39,7 +39,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const emailFrom = process.env.EMAIL_FROM || '"Zero Baby" <no-reply@zerobaby.com.bd>';
+    const emailFrom = process.env.EMAIL_FROM || '"Kids Paradise" <no-reply@kidsparadise.com.bd>';
 
     // Responsive, high-grade HTML template optimized for standard desktop and mobile email clients
     const buildEmailHtml = (titleMessage) => {
@@ -92,12 +92,12 @@ export default async function handler(req, res) {
               <tr>
                 <td style="border: none; padding: 0; vertical-align: top; width: 50%;">
                   <div class="logo-container">
-                    <img src="https://ik.imagekit.io/vrtbi4wsn/store/zerobaby-logo_a9UGaRrto.png" alt="Zero Baby" />
+                    <img src="https://kidsparadise.com.bd/wp-content/uploads/2026/08/kp-logo-1.1.png" alt="Kids Paradise" />
                   </div>
                   <p class="store-details">
                     <strong>Address:</strong> Pallabi Mirpur 11.5 Bus Stand, Dhaka-1216<br />
                     <strong>Mobile:</strong> 01797007260<br />
-                    <strong>Email:</strong> zerobaby2021@gmail.com
+                    <strong>Email:</strong> support@kidsparadise.com.bd
                   </p>
                 </td>
                 <td style="border: none; padding: 0; vertical-align: top; text-align: right; width: 50%;">
@@ -165,7 +165,7 @@ export default async function handler(req, res) {
             </div>
 
             <div class="footer">
-              <p>Thank you for shopping with <a href="https://www.zerobaby.com.bd">Zero Baby</a>!</p>
+              <p>Thank you for shopping with <a href="https://www.kidsparadise.com.bd">Kids Paradise</a>!</p>
               <p style="font-size: 10px; margin-top: 10px; color: #ccc;">This is an automated transaction confirmation. Please do not reply directly to this email.</p>
             </div>
           </div>
@@ -178,7 +178,7 @@ export default async function handler(req, res) {
     const customerEmail = order.customerEmail;
 
     // 1. Send Email to Customer
-    const customerSubject = `🛍️ Order Confirmed! Invoice #${order.id} - Zero Baby`;
+    const customerSubject = `🛍️ Order Confirmed! Invoice #${order.id} - Kids Paradise`;
     const customerTitle = `Thank you for your order, ${order.customerName}! Your invoice details are listed below.`;
     
     let customerMailOptions = {
@@ -196,7 +196,7 @@ export default async function handler(req, res) {
     }
 
     // 2. Send Email to Admin
-    const adminSubject = `🔔 New Order Received! Invoice #${order.id} - Zero Baby`;
+    const adminSubject = `🔔 New Order Received! Invoice #${order.id} - Kids Paradise`;
     const adminTitle = `New Order Alert! Invoice #${order.id} has been placed by ${order.customerName}.`;
 
     let adminMailOptions = {

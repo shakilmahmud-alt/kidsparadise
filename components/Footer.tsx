@@ -102,34 +102,12 @@ const Footer: React.FC = () => {
 
           {/* Social */}
           <div className="col-span-2 md:col-span-1 lg:col-span-1">
-            <div className="grid grid-cols-2 md:block gap-4">
-              <div>
-                <h3 className="text-white font-bold text-lg mb-6">Social Links</h3>
-                <div className="flex gap-4 mb-6">
-                  {storeInfo.socials?.facebook && <a href={storeInfo.socials.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-rose-500 transition-colors cursor-pointer"><Facebook size={18} /></a>}
-                  {storeInfo.socials?.instagram && <a href={storeInfo.socials.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-rose-500 transition-colors cursor-pointer"><Instagram size={18} /></a>}
-                  {(!storeInfo.socials?.facebook && !storeInfo.socials?.instagram) && <span className="text-gray-500 text-sm">No social links configured.</span>}
-                </div>
-              </div>
-
-              <div className="flex flex-col justify-center items-start pt-2 md:pt-0">
-                <div className="flex flex-wrap gap-2">
-                  {storeInfo.app_links?.android && (
-                    <a href={storeInfo.app_links.android} target="_blank" rel="noopener noreferrer" className="block w-28 hover:opacity-90 transition-opacity">
-                      <img src="https://dnaziaddhwmqalwrdgex.supabase.co/storage/v1/object/public/product-images/google-play.svg" alt="Get it on Google Play" className="w-full h-auto" />
-                    </a>
-                  )}
-                  {storeInfo.app_links?.ios && (
-                    <a href={storeInfo.app_links.ios} target="_blank" rel="noopener noreferrer" className="block w-28 hover:opacity-90 transition-opacity">
-                      <img src="https://dnaziaddhwmqalwrdgex.supabase.co/storage/v1/object/public/product-images/app-store.svg" alt="Download on App Store" className="w-full h-auto" />
-                    </a>
-                  )}
-                  {!storeInfo.app_links?.ios && !storeInfo.app_links?.android && (
-                    <div className="block w-28 opacity-50 cursor-not-allowed">
-                      <img src="https://dnaziaddhwmqalwrdgex.supabase.co/storage/v1/object/public/product-images/google-play.svg" alt="Get it on Google Play" className="w-full h-auto" />
-                    </div>
-                  )}
-                </div>
+            <div>
+              <h3 className="text-white font-bold text-lg mb-6">Social Links</h3>
+              <div className="flex gap-4 mb-6">
+                {storeInfo.socials?.facebook && <a href={storeInfo.socials.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-[#F0264C] transition-colors cursor-pointer"><Facebook size={18} /></a>}
+                {storeInfo.socials?.instagram && <a href={storeInfo.socials.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-[#F0264C] transition-colors cursor-pointer"><Instagram size={18} /></a>}
+                {(!storeInfo.socials?.facebook && !storeInfo.socials?.instagram) && <span className="text-gray-500 text-sm">No social links configured.</span>}
               </div>
             </div>
           </div>
