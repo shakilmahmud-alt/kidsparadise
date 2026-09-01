@@ -14,6 +14,7 @@ export interface Product {
   slug?: string;
   brand?: string;
   isFeatured?: boolean;
+  stock?: number;
   variants?: Variant[];
   filterAttributes?: { name: string; options: string[] }[];
 }
