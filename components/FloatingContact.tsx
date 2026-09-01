@@ -77,7 +77,7 @@ const FloatingContact = () => {
                 {phone && (
                     <button
                         onClick={() => handleLink(phone, 'tel')}
-                        className="w-12 h-12 bg-[#e92c5d] rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform"
+                        className="w-12 h-12 bg-[#F0264C] rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform"
                         title="Phone"
                     >
                         <Phone size={24} />
@@ -88,10 +88,10 @@ const FloatingContact = () => {
             {/* Main Toggle Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 relative overflow-hidden ring-4 ring-white pointer-events-auto ${isOpen ? 'bg-[#007bff] rotate-180' : 'bg-transparent hover:scale-105'}`}
+                className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 relative overflow-hidden ring-4 ring-white pointer-events-auto cursor-pointer ${isOpen ? 'bg-[#F0264C] rotate-180' : 'bg-transparent hover:scale-105'}`}
             >
                 {isOpen ? (
-                    <X size={32} className="text-white" />
+                    <X size={30} className="text-white" strokeWidth={2.5} />
                 ) : (
                     supportImage ? (
                         <div className="w-full h-full relative group">
@@ -100,7 +100,7 @@ const FloatingContact = () => {
                             <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></span>
                         </div>
                     ) : (
-                        <div className="w-full h-full bg-[#007bff] flex items-center justify-center text-white rounded-full">
+                        <div className="w-full h-full bg-[#F0264C] flex items-center justify-center text-white rounded-full">
                             <MessageSquare size={28} />
                             <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></span>
                         </div>
