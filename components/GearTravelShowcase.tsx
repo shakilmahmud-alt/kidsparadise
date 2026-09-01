@@ -129,6 +129,20 @@ export const GearTravelShowcase: React.FC = () => {
     );
   }, [activeTab, filteredProducts.length]);
 
+  // Dynamic button text and destination link
+  const currentTabObj = useMemo(() => {
+    return gearTabs.find(t => t.id === activeTab) || gearTabs[0];
+  }, [activeTab, gearTabs]);
+
+  const shopAllText = useMemo(() => {
+    if (currentTabObj.id === 'all') return 'Shop All Gear & Travel';
+    return `Shop All ${currentTabObj.name}`;
+  }, [currentTabObj]);
+
+  const shopAllLink = useMemo(() => {
+    return `/category/${currentTabObj.slug}`;
+  }, [currentTabObj]);
+
   return (
     <section ref={containerRef} className="w-full max-w-[1680px] mx-auto px-4 md:px-8 mb-12 md:mb-20 font-sans">
       
@@ -245,6 +259,17 @@ export const GearTravelShowcase: React.FC = () => {
           </button>
         </div>
 
+      </div>
+
+      {/* Dynamic "Shop All [sub category]" Button */}
+      <div className="flex justify-center mt-8 md:mt-10">
+        <Link
+          to={shopAllLink}
+          className="px-8 py-3.5 bg-white hover:bg-[#F0264C] text-gray-800 hover:text-white border-2 border-gray-200 hover:border-[#F0264C] font-extrabold text-xs md:text-sm uppercase tracking-wider rounded-2xl shadow-xs hover:shadow-md transition-all duration-300 flex items-center gap-2.5 group cursor-pointer"
+        >
+          <span>{shopAllText}</span>
+          <ArrowRight size={16} className="group-hover:translate-x-1.5 transition-transform text-[#F0264C] group-hover:text-white" />
+        </Link>
       </div>
 
     </section>

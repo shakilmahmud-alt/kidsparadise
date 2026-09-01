@@ -14,7 +14,18 @@ import {
   SlidersHorizontal,
   Instagram,
   Facebook,
-  Youtube
+  Youtube,
+  Shirt,
+  Sparkles,
+  Car,
+  ShieldCheck,
+  Layers,
+  BookOpen,
+  Package,
+  Rocket,
+  Star,
+  Award,
+  ShoppingBag
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -24,6 +35,19 @@ interface CategoryNode extends Category {
   children: CategoryNode[];
   level: number;
 }
+
+const getMainCategoryIcon = (name: string) => {
+  const lower = name.toLowerCase();
+  if (lower.includes('apparel') || lower.includes('cloth') || lower.includes('fashion')) return <Shirt size={16} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('toy') || lower.includes('lego')) return <Sparkles size={16} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('gear') || lower.includes('travel') || lower.includes('stroller')) return <Car size={16} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('care & hygiene') || lower.includes('hygiene') || lower.includes('bath') || lower.includes('skin')) return <ShieldCheck size={16} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('furniture') || lower.includes('bed')) return <Layers size={16} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('stationery')) return <BookOpen size={16} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('mother')) return <Heart size={16} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('other')) return <Package size={16} className="text-[#556885]" strokeWidth={1.8} />;
+  return <ShoppingBag size={16} className="text-[#556885]" strokeWidth={1.8} />;
+};
 
 const buildCategoryTree = (categories: Category[], parentId: string | null = null, level: number = 0): CategoryNode[] => {
   return categories
@@ -93,7 +117,7 @@ const MobileCategoryItem: React.FC<{ category: CategoryNode; level: number; onCl
 };
 
 export const Header: React.FC = () => {
-  const { cart, isAdmin, user, signOut, searchQuery, setSearchQuery, openCart, storeInfo, categories, products, userProfile, wishlist } = useStore();
+  const { cart, isAdmin, user, signOut, searchQuery, setSearchQuery, openCart, storeInfo, categories, products, userProfile, wishlist, attributes } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -101,12 +125,48 @@ export const Header: React.FC = () => {
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSticky, setIsSticky] = useState(false);
+  const [isStickyMenuOpen, setIsStickyMenuOpen] = useState(false);
+  const [activeStickyCategory, setActiveStickyCategory] = useState<CategoryNode | null>(null);
+  const [isHoveringStickyBrands, setIsHoveringStickyBrands] = useState(false);
   const [showTopBar, setShowTopBar] = useState(true);
   const [showResults, setShowResults] = useState(false);
 
   const categoryTree = useMemo(() => {
     return buildCategoryTree(categories);
   }, [categories]);
+
+  // Order parent categories matching sidebar
+  const orderedParentCategories = useMemo(() => {
+    const order = [
+      'apparels',
+      'toys',
+      'gear & travel',
+      'care & hygiene',
+      'furniture & bedding',
+      'stationery',
+      'mother care',
+      'others'
+    ];
+
+    const parents = categoryTree.filter(c => c.parentId === null || c.parentId === '0' || c.parentId === undefined || c.parentId === '');
+    
+    return [...parents].sort((a, b) => {
+      const idxA = order.indexOf(a.name.toLowerCase());
+      const idxB = order.indexOf(b.name.toLowerCase());
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [categoryTree]);
+
+  // All Brands from database attributes (id: 3, name: 'Brands')
+  const allBrands = useMemo(() => {
+    const brandAttr = (attributes || []).find(a => a.name.toLowerCase() === 'brands');
+    if (!brandAttr || !brandAttr.values) return [];
+    
+    return [...brandAttr.values].sort((a, b) => a.value.localeCompare(b.value));
+  }, [attributes]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery || searchQuery.length < 2) return [];
@@ -118,6 +178,7 @@ export const Header: React.FC = () => {
   // Sync search query with URL and close menus
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setIsStickyMenuOpen(false);
     setShowResults(false);
   }, [location.pathname, location.search]);
 
@@ -295,15 +356,214 @@ export const Header: React.FC = () => {
       <div className={`fixed top-0 left-0 w-full bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-md py-2.5 px-4 md:px-8 z-[100] transition-all duration-300 ${
         isSticky ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}>
-        <div className="container mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-[1680px] mx-auto flex items-center justify-between gap-4">
           
-          <Link to="/" className="flex items-center flex-shrink-0">
-            <img
-              src="https://kidsparadise.com.bd/wp-content/uploads/2026/08/kp-logo-1.1.png"
-              alt="KidsParadise"
-              className="h-8 md:h-10 w-auto object-contain"
-            />
-          </Link>
+          {/* Logo & Sticky "Shop by" Menu Bar */}
+          <div className="flex items-center gap-3 relative">
+            <Link to="/" className="flex items-center flex-shrink-0">
+              <img
+                src="https://kidsparadise.com.bd/wp-content/uploads/2026/08/kp-logo-1.1.png"
+                alt="KidsParadise"
+                className="h-8 md:h-10 w-auto object-contain"
+              />
+            </Link>
+
+            {/* Sticky "Shop by" Menu Button */}
+            <div className="relative">
+              <button
+                onClick={() => setIsStickyMenuOpen(!isStickyMenuOpen)}
+                className="flex items-center gap-1.5 bg-[#F0264C] text-white hover:bg-[#d01c3f] px-3.5 py-2 rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer select-none active:scale-95"
+                title="Shop by Category"
+              >
+                <Menu size={16} strokeWidth={2.5} />
+                <span className="hidden sm:inline">Shop by</span>
+              </button>
+
+              {/* Sticky "Shop by" Dropdown Menu (Exact Replica of Reference Image 2) */}
+              {isStickyMenuOpen && (
+                <div 
+                  className="absolute left-0 top-full mt-2.5 w-[270px] bg-white rounded-xl shadow-2xl border border-gray-200 z-[120] animate-in fade-in slide-in-from-top-2 duration-200"
+                  onMouseLeave={() => {
+                    setActiveStickyCategory(null);
+                    setIsHoveringStickyBrands(false);
+                  }}
+                >
+                  {/* Menu Header Banner */}
+                  <div className="flex items-center justify-between bg-[#F0264C] text-white px-4 py-3 rounded-t-xl font-bold">
+                    <span className="text-sm font-bold tracking-wide">Shop by</span>
+                    <Menu size={18} className="text-white" strokeWidth={2.5} />
+                  </div>
+
+                  {/* Categories List */}
+                  <nav className="divide-y divide-gray-100 max-h-[460px] overflow-y-auto">
+                    {orderedParentCategories.map((cat, idx) => {
+                      const isHovered = activeStickyCategory?.id === cat.id;
+
+                      return (
+                        <div
+                          key={`sticky-${cat.id}`}
+                          className="relative group/stickyitem"
+                          onMouseEnter={() => {
+                            setActiveStickyCategory(cat);
+                            setIsHoveringStickyBrands(false);
+                          }}
+                        >
+                          <Link
+                            to={`/category/${cat.slug || encodeURIComponent(cat.name)}`}
+                            onClick={() => setIsStickyMenuOpen(false)}
+                            className={`flex items-center justify-between px-4 py-2.5 text-[13.5px] transition-colors ${
+                              isHovered 
+                                ? 'text-[#0072CE] font-bold bg-blue-50/60' 
+                                : 'text-[#1d293f] font-semibold hover:text-[#0072CE]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {getMainCategoryIcon(cat.name)}
+                              <span className="truncate">{cat.name.replace(/&amp;/g, '&')}</span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {idx === 0 && (
+                                <span className="bg-[#FFCC00] text-black text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded-[4px]">
+                                  NEW
+                                </span>
+                              )}
+                              {idx === 3 && (
+                                <span className="bg-[#FF4D15] text-white text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded-[4px]">
+                                  HOT
+                                </span>
+                              )}
+                              <ChevronRight size={14} className={`transition-transform text-gray-400 ${isHovered ? 'text-[#0072CE] translate-x-0.5' : ''}`} />
+                            </div>
+                          </Link>
+                        </div>
+                      );
+                    })}
+
+                    {/* New Arrivals */}
+                    <Link
+                      to="/products?filter=new"
+                      onClick={() => setIsStickyMenuOpen(false)}
+                      onMouseEnter={() => { setActiveStickyCategory(null); setIsHoveringStickyBrands(false); }}
+                      className="flex items-center justify-between px-4 py-2.5 text-[13.5px] font-semibold text-[#1d293f] hover:text-[#0072CE] hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Rocket size={18} className="text-[#556885]" strokeWidth={1.8} />
+                        <span>New Arrivals</span>
+                      </div>
+                    </Link>
+
+                    {/* Best Sellers */}
+                    <Link
+                      to="/products?filter=bestseller"
+                      onClick={() => setIsStickyMenuOpen(false)}
+                      onMouseEnter={() => { setActiveStickyCategory(null); setIsHoveringStickyBrands(false); }}
+                      className="flex items-center justify-between px-4 py-2.5 text-[13.5px] font-semibold text-[#1d293f] hover:text-[#0072CE] hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Star size={18} className="text-[#556885]" strokeWidth={1.8} />
+                        <span>Best Sellers</span>
+                      </div>
+                    </Link>
+
+                    {/* Brands */}
+                    <div
+                      className="relative group/stickyitem"
+                      onMouseEnter={() => {
+                        setIsHoveringStickyBrands(true);
+                        setActiveStickyCategory(null);
+                      }}
+                    >
+                      <Link
+                        to="/products"
+                        onClick={() => setIsStickyMenuOpen(false)}
+                        className={`flex items-center justify-between px-4 py-2.5 text-[13.5px] transition-colors ${
+                          isHoveringStickyBrands 
+                            ? 'text-[#0072CE] font-bold bg-blue-50/60' 
+                            : 'text-[#1d293f] font-semibold hover:text-[#0072CE]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Award size={18} className="text-[#556885]" strokeWidth={1.8} />
+                          <span>Brands</span>
+                        </div>
+                        <ChevronRight size={14} className={`transition-transform text-gray-400 ${isHoveringStickyBrands ? 'text-[#0072CE] translate-x-0.5' : ''}`} />
+                      </Link>
+                    </div>
+                  </nav>
+
+                  {/* Footer of Menu */}
+                  <div className="bg-white rounded-b-xl border-t border-gray-100 text-center py-2.5 text-[10px] text-gray-400">
+                    KidsParadise Premium Store
+                  </div>
+
+                  {/* Flyout Submenu to the Right */}
+                  {activeStickyCategory && activeStickyCategory.children && activeStickyCategory.children.length > 0 && (
+                    <div 
+                      className="absolute left-[270px] top-0 w-[420px] max-h-[460px] bg-white rounded-xl shadow-2xl p-6 border border-gray-200 z-[130] overflow-y-auto animate-in fade-in duration-150"
+                      onMouseEnter={() => setActiveStickyCategory(activeStickyCategory)}
+                      onMouseLeave={() => setActiveStickyCategory(null)}
+                    >
+                      <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100">
+                        <h4 className="font-extrabold text-base text-[#1d293f]">
+                          {activeStickyCategory.name.replace(/&amp;/g, '&')}
+                        </h4>
+                        <Link
+                          to={`/category/${activeStickyCategory.slug || encodeURIComponent(activeStickyCategory.name)}`}
+                          onClick={() => setIsStickyMenuOpen(false)}
+                          className="text-xs font-bold text-[#F0264C] hover:underline"
+                        >
+                          View All
+                        </Link>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {activeStickyCategory.children.map((child: any) => (
+                          <Link
+                            key={child.id}
+                            to={`/category/${child.slug || encodeURIComponent(child.name)}`}
+                            onClick={() => setIsStickyMenuOpen(false)}
+                            className="text-xs text-gray-700 hover:text-[#0072CE] hover:font-bold py-1.5 px-2 rounded-lg hover:bg-blue-50/50 transition-all truncate block"
+                          >
+                            • {child.name.replace(/&amp;/g, '&')}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Brands Flyout to the Right */}
+                  {isHoveringStickyBrands && allBrands.length > 0 && (
+                    <div 
+                      className="absolute left-[270px] top-0 w-[420px] max-h-[460px] bg-white rounded-xl shadow-2xl p-6 border border-gray-200 z-[130] overflow-y-auto animate-in fade-in duration-150"
+                      onMouseEnter={() => setIsHoveringStickyBrands(true)}
+                      onMouseLeave={() => setIsHoveringStickyBrands(false)}
+                    >
+                      <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100">
+                        <h4 className="font-extrabold text-base text-[#1d293f]">Shop by Brands</h4>
+                        <Link to="/products" onClick={() => setIsStickyMenuOpen(false)} className="text-xs font-bold text-[#F0264C] hover:underline">
+                          All Brands
+                        </Link>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        {allBrands.slice(0, 24).map((brand: any) => (
+                          <Link
+                            key={brand.id || brand.value}
+                            to={`/products?brand=${encodeURIComponent(brand.value)}`}
+                            onClick={() => setIsStickyMenuOpen(false)}
+                            className="text-xs text-gray-700 hover:text-[#0072CE] hover:font-bold py-1 px-2 rounded-lg hover:bg-blue-50/50 transition-all truncate block"
+                          >
+                            • {brand.value}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Compact Sticky Search */}
           <div className="flex-1 max-w-xl mx-4 relative">
