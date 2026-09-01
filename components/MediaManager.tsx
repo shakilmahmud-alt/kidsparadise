@@ -4,7 +4,7 @@ import {
   FileText, RefreshCw, AlertCircle, Eye, X, HardDrive, CheckCircle2 
 } from 'lucide-react';
 import { MediaItem } from '../types';
-import { uploadToImageKit } from '../lib/imagekit';
+import { uploadToCpanel } from '../lib/cpanelUpload';
 
 export const MediaManager: React.FC = () => {
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
@@ -83,8 +83,8 @@ export const MediaManager: React.FC = () => {
       setUploadProgress(`Uploading ${i + 1} of ${totalFiles}: ${file.name}...`);
 
       try {
-        // 1. Upload file to Cloud CDN storage
-        const uploadedUrl = await uploadToImageKit(file, '/media');
+        // 1. Upload file directly to cPanel hosting (with auto fallback)
+        const uploadedUrl = await uploadToCpanel(file, '/media');
 
         // 2. Save metadata to MySQL media table
         let savedItem: MediaItem | null = null;

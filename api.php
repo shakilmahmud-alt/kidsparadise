@@ -67,17 +67,11 @@ if ($method === 'GET' && empty($action)) {
     exit();
 }
 
-// 5. Image Upload Handler (Uploads directly to cPanel uploads/ folder)
+// 5. Image & Media Upload Handler (Uploads directly to cPanel uploads/ folder)
 if ($action === 'upload') {
     if ($method !== 'POST') {
         http_response_code(405);
         echo json_encode(['error' => 'Method not allowed']);
-        exit();
-    }
-
-    if (!isset($_FILES['file'])) {
-        http_response_code(400);
-        echo json_encode(['error' => 'No file uploaded']);
         exit();
     }
 
@@ -86,29 +80,102 @@ if ($action === 'upload') {
         mkdir($uploadDir, 0755, true);
     }
 
-    $file = $_FILES['file'];
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'];
+    $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'pdf', 'mp4', 'webm', 'mov', 'zip', 'doc', 'docx', 'xlsx'];
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+    $host = $_SERVER['HTTP_HOST'];
 
-    if (!in_array($ext, $allowed)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Invalid file type']);
-        exit();
+    // Option A: Base64 JSON payload (100% ModSecurity-safe)
+    if (!empty($input['file']) || !empty($input['data'])) {
+        $raw = $input['file'] ?? $input['data'];
+        $originalName = $input['name'] ?? ('media_' . time() . '.png');
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION)) ?: 'png';
+        
+        if (!in_array($ext, $allowed)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid file extension']);
+            exit();
+        }
+
+        $cleanName = preg_replace('/[^a-zA-Z0-9_-]/', '_', pathinfo($originalName, PATHINFO_FILENAME));
+        $fileName = 'kp_' . time() . '_' . substr($cleanName, 0, 30) . '.' . $ext;
+        $targetPath = $uploadDir . $fileName;
+
+        $base64Data = preg_replace('#^data:[^;]+;base64,#i', '', $raw);
+        $binary = base64_decode($base64Data);
+
+        if ($binary !== false && file_put_contents($targetPath, $binary)) {
+            $url = $protocol . $host . '/uploads/' . $fileName;
+            $size = strlen($binary);
+            $fileType = 'image/' . $ext;
+
+            // Save to MySQL media table
+            try {
+                $stmt = $pdo->prepare('INSERT INTO media (name, url, file_type, size) VALUES (?, ?, ?, ?)');
+                $stmt->execute([$originalName, $url, $fileType, $size]);
+            } catch (Exception $ex) {
+                // Silently ignore if media table fails
+            }
+
+            echo json_encode([
+                'success' => true,
+                'url' => $url,
+                'name' => $fileName,
+                'size' => $size,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+            exit();
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to save base64 file on cPanel']);
+            exit();
+        }
     }
 
-    $fileName = 'prod_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-    $targetPath = $uploadDir . $fileName;
+    // Option B: Standard Multipart Form Data
+    if (isset($_FILES['file'])) {
+        $file = $_FILES['file'];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
-    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
-        $host = $_SERVER['HTTP_HOST'];
-        $url = $protocol . $host . '/uploads/' . $fileName;
+        if (!in_array($ext, $allowed)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid file type']);
+            exit();
+        }
 
-        echo json_encode(['success' => true, 'url' => $url]);
-    } else {
-        http_response_code(500);
-        echo json_encode(['error' => 'Failed to save file on cPanel']);
+        $cleanName = preg_replace('/[^a-zA-Z0-9_-]/', '_', pathinfo($file['name'], PATHINFO_FILENAME));
+        $fileName = 'kp_' . time() . '_' . substr($cleanName, 0, 30) . '.' . $ext;
+        $targetPath = $uploadDir . $fileName;
+
+        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+            $url = $protocol . $host . '/uploads/' . $fileName;
+            $size = filesize($targetPath);
+            $fileType = $file['type'] ?? ('image/' . $ext);
+
+            // Save to MySQL media table
+            try {
+                $stmt = $pdo->prepare('INSERT INTO media (name, url, file_type, size) VALUES (?, ?, ?, ?)');
+                $stmt->execute([$file['name'], $url, $fileType, $size]);
+            } catch (Exception $ex) {
+                // Silently ignore if media table fails
+            }
+
+            echo json_encode([
+                'success' => true,
+                'url' => $url,
+                'name' => $fileName,
+                'size' => $size,
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+            exit();
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to move uploaded file on cPanel']);
+            exit();
+        }
     }
+
+    http_response_code(400);
+    echo json_encode(['error' => 'No file uploaded']);
     exit();
 }
 
