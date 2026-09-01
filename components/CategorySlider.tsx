@@ -29,62 +29,62 @@ export const CategorySlider: React.FC = () => {
     return () => window.removeEventListener('resize', measure);
   }, []);
 
-  // 8 Parent Categories with tailored vibrant cards matching reference Image 4 & 5
+  // 8 Parent Categories with KidsParadise brand color scheme (#F0264C and #000000)
   const parentCategories: CategoryBanner[] = useMemo(() => [
     {
       id: 'apparels',
       name: 'Apparels',
       slug: 'apparels',
-      bgColor: 'bg-[#0072CE]',
+      bgColor: 'bg-[#F0264C]', // Main brand red
       image: 'https://images.unsplash.com/photo-1522771930-78848d9293e8?auto=format&fit=crop&w=500&q=90'
     },
     {
       id: 'toys',
       name: 'Toys',
       slug: 'toys',
-      bgColor: 'bg-[#222a35]',
+      bgColor: 'bg-[#000000]', // Black
       image: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=500&q=90'
     },
     {
       id: 'gear-travel',
       name: 'Gear & Travel',
       slug: 'gear-travel',
-      bgColor: 'bg-[#0072CE]',
+      bgColor: 'bg-[#B81432]', // Deep red
       image: 'https://images.unsplash.com/photo-1591088398332-8a7791972843?auto=format&fit=crop&w=500&q=90'
     },
     {
       id: 'care-hygiene',
       name: 'Care & Hygiene',
       slug: 'baby-care-hygiene',
-      bgColor: 'bg-[#c85a32]',
+      bgColor: 'bg-[#111827]', // Charcoal / Dark Slate
       image: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=500&q=90'
     },
     {
       id: 'furniture-bedding',
       name: 'Furniture & Bedding',
       slug: 'furniture-bedding',
-      bgColor: 'bg-[#0072CE]',
+      bgColor: 'bg-[#F0264C]', // Main brand red
       image: 'https://images.unsplash.com/photo-1543332164-6e82f355badc?auto=format&fit=crop&w=500&q=90'
     },
     {
       id: 'stationery',
       name: 'Stationery',
       slug: 'baby-stationery',
-      bgColor: 'bg-[#0072CE]',
+      bgColor: 'bg-[#000000]', // Black
       image: 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?auto=format&fit=crop&w=500&q=90'
     },
     {
       id: 'mother-care',
       name: 'Mother Care',
       slug: 'mother-care',
-      bgColor: 'bg-[#222a35]',
+      bgColor: 'bg-[#B81432]', // Deep red
       image: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?auto=format&fit=crop&w=500&q=90'
     },
     {
       id: 'others',
       name: 'Others',
       slug: 'others',
-      bgColor: 'bg-[#0072CE]',
+      bgColor: 'bg-[#111827]', // Charcoal
       image: 'https://images.unsplash.com/photo-1558877385-81a1c7e67d72?auto=format&fit=crop&w=500&q=90'
     }
   ], []);
@@ -185,7 +185,7 @@ export const CategorySlider: React.FC = () => {
                   onClick={() => setCurrentSlide(idx)}
                   className={`h-2.5 rounded-full transition-all duration-300 ${
                     currentSlide === idx
-                      ? 'w-6 bg-[#0072CE]'
+                      ? 'w-7 bg-[#F0264C]'
                       : 'w-2.5 bg-gray-300 hover:bg-gray-400'
                   }`}
                   title={`Slide ${idx + 1}`}
@@ -197,14 +197,14 @@ export const CategorySlider: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <button
                 onClick={prevSlide}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-colors active:scale-95 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-[#F0264C] hover:text-white text-gray-700 flex items-center justify-center transition-colors active:scale-95 cursor-pointer shadow-xs"
                 title="Previous"
               >
                 <ChevronLeft size={16} />
               </button>
               <button
                 onClick={nextSlide}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-colors active:scale-95 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-[#F0264C] hover:text-white text-gray-700 flex items-center justify-center transition-colors active:scale-95 cursor-pointer shadow-xs"
                 title="Next"
               >
                 <ChevronRight size={16} />

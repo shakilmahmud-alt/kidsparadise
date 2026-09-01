@@ -815,9 +815,9 @@ const Home: React.FC = () => {
       {/* Hero Section */}
       <HeroSection />
 
-      {/* Features Bar (Matching Reference Image 3) */}
-      <section className="features-container max-w-[1680px] mx-auto px-4 md:px-8 mb-6 md:mb-12">
-        <div className="bg-[#f0f2f5] rounded-2xl p-6 md:p-8 border border-gray-200/60">
+      {/* Features Bar (Full Width, Project Brand Color #F0264C) */}
+      <section className="w-full bg-[#f8f9fa] border-y border-gray-200/80 py-7 md:py-9 mb-8 md:mb-14">
+        <div className="max-w-[1680px] mx-auto px-4 md:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-0 lg:divide-x lg:divide-gray-200">
             {[
               {
@@ -842,8 +842,8 @@ const Home: React.FC = () => {
               }
             ].map((feat, idx) => (
               <div key={idx} className="flex items-start gap-4 lg:px-6 first:lg:pl-0 last:lg:pr-0">
-                <div className="w-12 h-12 bg-white text-[#0072CE] rounded-xl flex items-center justify-center flex-shrink-0 shadow-xs border border-gray-100">
-                  <feat.icon size={22} strokeWidth={2} />
+                <div className="w-12 h-12 bg-white text-[#F0264C] rounded-xl flex items-center justify-center flex-shrink-0 shadow-xs border border-rose-100">
+                  <feat.icon size={22} strokeWidth={2.2} />
                 </div>
                 <div>
                   <h4 className="font-bold text-[14.5px] text-[#1d293f] leading-snug tracking-tight">
