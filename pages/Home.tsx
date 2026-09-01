@@ -4,9 +4,10 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 import { Link } from 'react-router-dom';
-import { ArrowRight, Truck, Headphones, ShieldCheck, Award } from 'lucide-react';
+import { ArrowRight, Truck, Headphones, ShieldCheck, Award, ShoppingBag, CreditCard, ClipboardCheck } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import HeroSection from '../components/HeroSection';
+import CategorySlider from '../components/CategorySlider';
 import { useStore } from '../context/StoreContext';
 import { HomeSection, Product, Brand } from '../types';
 
@@ -814,36 +815,52 @@ const Home: React.FC = () => {
       {/* Hero Section */}
       <HeroSection />
 
-      {/* Features Bar */}
+      {/* Features Bar (Matching Reference Image 3) */}
       <section className="features-container max-w-[1680px] mx-auto px-4 md:px-8 mb-6 md:mb-12">
-        <div className="bg-[#f7f8f3] rounded-2xl p-6 md:p-8">
-          <div
-            ref={scrollRef}
-            onMouseDown={handleMouseDown}
-            onMouseLeave={handleMouseLeave}
-            onMouseUp={handleMouseUp}
-            onMouseMove={handleMouseMove}
-            className="flex overflow-x-auto md:grid md:grid-cols-5 gap-4 md:gap-8 scrollbar-hide cursor-grab active:cursor-grabbing snap-x"
-          >
+        <div className="bg-[#f0f2f5] rounded-2xl p-6 md:p-8 border border-gray-200/60">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-0 lg:divide-x lg:divide-gray-200">
             {[
-              { icon: Headphones, title: 'Online Support' },
-              { icon: ShieldCheck, title: 'Official Product' },
-              { icon: Truck, title: 'Fastest Delivery' },
-              { icon: Award, title: 'Secure Payment' },
-              { icon: Award, title: 'Genuine Product' },
+              {
+                icon: ShoppingBag,
+                title: 'Product Selection',
+                desc: 'Browse and choose from our wide range of products tailored to your needs.'
+              },
+              {
+                icon: CreditCard,
+                title: 'Payment Options',
+                desc: 'Securely select your preferred payment method for a smooth checkout experience.'
+              },
+              {
+                icon: ClipboardCheck,
+                title: 'Order Confirmation',
+                desc: 'Review and confirm your order details before finalizing your purchase.'
+              },
+              {
+                icon: Truck,
+                title: 'Shipping & Delivery',
+                desc: 'Sit back and relax while we carefully pack and deliver your order to your doorstep.'
+              }
             ].map((feat, idx) => (
-              <div key={idx} className="feature-badge flex items-center gap-2 md:gap-3 min-w-[140px] md:min-w-0 flex-shrink-0 snap-start px-1 md:px-0 select-none">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-[#e92c5d] text-white rounded-md flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <feat.icon size={20} className="md:w-6 md:h-6" strokeWidth={2} />
+              <div key={idx} className="flex items-start gap-4 lg:px-6 first:lg:pl-0 last:lg:pr-0">
+                <div className="w-12 h-12 bg-white text-[#0072CE] rounded-xl flex items-center justify-center flex-shrink-0 shadow-xs border border-gray-100">
+                  <feat.icon size={22} strokeWidth={2} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-[13px] md:text-sm text-gray-800 leading-tight">{feat.title}</h4>
+                  <h4 className="font-bold text-[14.5px] text-[#1d293f] leading-snug tracking-tight">
+                    {feat.title}
+                  </h4>
+                  <p className="text-xs text-gray-500 leading-relaxed mt-1">
+                    {feat.desc}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
         </div>
       </section>
+
+      {/* Find your products Category Carousel Slider (Matching Reference Image 4 & 5) */}
+      <CategorySlider />
 
       {/* Dynamic Home Sections */}
       {homeSections

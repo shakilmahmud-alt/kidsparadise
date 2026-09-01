@@ -162,28 +162,7 @@ export const Header: React.FC = () => {
         </div>
       )}
 
-      {/* 2. Top Utility Row */}
-      <div className="hidden md:block bg-[#f8f9fa] border-b border-gray-200/80 py-2 px-4 md:px-8 text-xs text-gray-500">
-        <div className="max-w-[1680px] mx-auto flex items-center justify-end">
-          
-          {/* Right: Currency, Language & Socials */}
-          <div className="flex items-center gap-5">
-            <div className="flex items-center gap-1 hover:text-gray-900 cursor-pointer">
-              <span>🇧🇩 Bangladesh (BDT ৳)</span>
-            </div>
-            <span>|</span>
-            <div className="flex items-center gap-1 hover:text-gray-900 cursor-pointer">
-              <span>English</span>
-            </div>
-            <span>|</span>
-            <div className="flex items-center gap-3 text-gray-400">
-              <a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-[#F0264C] transition-colors"><Facebook size={13} /></a>
-              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-[#F0264C] transition-colors"><Instagram size={13} /></a>
-              <a href="https://youtube.com" target="_blank" rel="noreferrer" className="hover:text-[#F0264C] transition-colors"><Youtube size={13} /></a>
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       {/* 3. Main Header Bar (Logo | Support Phone | Sign In | Wishlist | Cart) */}
       <div className="bg-white py-4 md:py-5 px-4 md:px-8 border-b border-gray-100 shadow-sm relative">
