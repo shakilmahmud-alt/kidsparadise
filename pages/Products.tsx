@@ -121,7 +121,7 @@ const Products: React.FC = () => {
 
   // Derived state from URL
   const selectedBrands = useMemo(() => {
-    const brandsParam = searchParams.get('brands');
+    const brandsParam = searchParams.get('brands') || searchParams.get('brand') || searchParams.get('attr_Brands');
     return brandsParam ? brandsParam.split(',').filter(Boolean) as string[] : [];
   }, [searchParams]);
   const selectedMinRating = searchParams.get('rating') ? Number(searchParams.get('rating')) : null;
@@ -325,7 +325,16 @@ const Products: React.FC = () => {
         p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.category.some(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      const brandMatch = selectedBrands.length === 0 || (p.brand && selectedBrands.includes(p.brand));
+      const brandMatch = selectedBrands.length === 0 || selectedBrands.some(b => {
+        const lowerB = b.toLowerCase();
+        return (
+          (p.brand && p.brand.toLowerCase() === lowerB) ||
+          p.name.toLowerCase().includes(lowerB) ||
+          p.description.toLowerCase().includes(lowerB) ||
+          (p.filterAttributes && p.filterAttributes.some(fa => fa.name.toLowerCase().includes('brand') && fa.options.some(opt => opt.toLowerCase() === lowerB))) ||
+          (p.variants && p.variants.some(v => Object.entries(v.attributeValues).some(([k, val]) => k.toLowerCase().includes('brand') && val.toLowerCase() === lowerB)))
+        );
+      });
 
       let ratingMatch = true;
       if (selectedMinRating !== null) {

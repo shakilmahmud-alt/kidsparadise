@@ -162,52 +162,32 @@ export const Header: React.FC = () => {
         </div>
       )}
 
-      {/* 2. Top Utility Row (Matching Reference Image 1) */}
-      <div className="hidden md:block bg-[#f8f9fa] border-b border-gray-200/80 py-2 px-4 text-xs text-gray-500">
-        <div className="container mx-auto flex items-center justify-between">
+      {/* 2. Top Utility Row */}
+      <div className="hidden md:block bg-[#f8f9fa] border-b border-gray-200/80 py-2 px-4 md:px-8 text-xs text-gray-500">
+        <div className="max-w-[1680px] mx-auto flex items-center justify-end">
           
-          {/* Left: Store Links / Highlights */}
-          <div className="flex items-center gap-6">
-            <span className="flex items-center gap-1.5 font-medium text-gray-600">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Welcome to KidsParadise Official Online Store
-            </span>
-          </div>
-
           {/* Right: Currency, Language & Socials */}
           <div className="flex items-center gap-5">
             <div className="flex items-center gap-1 hover:text-gray-900 cursor-pointer">
               <span>🇧🇩 Bangladesh (BDT ৳)</span>
             </div>
-            
-            <div className="h-3 w-px bg-gray-300"></div>
-
+            <span>|</span>
             <div className="flex items-center gap-1 hover:text-gray-900 cursor-pointer">
               <span>English</span>
             </div>
-
-            <div className="h-3 w-px bg-gray-300"></div>
-
-            {/* Social Icons */}
+            <span>|</span>
             <div className="flex items-center gap-3 text-gray-400">
-              <a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-[#F0264C] transition-colors" title="Facebook">
-                <Facebook size={14} />
-              </a>
-              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-[#F0264C] transition-colors" title="Instagram">
-                <Instagram size={14} />
-              </a>
-              <a href="https://youtube.com" target="_blank" rel="noreferrer" className="hover:text-[#F0264C] transition-colors" title="YouTube">
-                <Youtube size={14} />
-              </a>
+              <a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-[#F0264C] transition-colors"><Facebook size={13} /></a>
+              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-[#F0264C] transition-colors"><Instagram size={13} /></a>
+              <a href="https://youtube.com" target="_blank" rel="noreferrer" className="hover:text-[#F0264C] transition-colors"><Youtube size={13} /></a>
             </div>
           </div>
-
         </div>
       </div>
 
-      {/* 3. Main Header Bar (Matching Reference Image 1: Logo | Support Phone | Sign In | Wishlist | Cart) */}
+      {/* 3. Main Header Bar (Logo | Support Phone | Sign In | Wishlist | Cart) */}
       <div className="bg-white py-4 md:py-5 px-4 md:px-8 border-b border-gray-100 shadow-sm relative">
-        <div className="container mx-auto flex items-center justify-between gap-6">
+        <div className="max-w-[1680px] mx-auto flex items-center justify-between gap-6">
 
           {/* Left: Hamburger (Mobile) & Official KidsParadise Logo */}
           <div className="flex items-center gap-4">

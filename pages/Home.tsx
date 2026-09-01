@@ -83,7 +83,7 @@ const SliderSection: React.FC<{ section: HomeSection; products: Product[] }> = (
   }, [products.length]);
 
   return (
-    <section ref={containerRef} className="container mx-auto px-4 md:px-8 mb-6 md:mb-16 relative group/slider">
+    <section ref={containerRef} className="max-w-[1680px] mx-auto px-4 md:px-8 mb-6 md:mb-16 relative group/slider">
       <div className="flex justify-between items-end mb-6">
         <h2 className="text-lg md:text-2xl font-bold text-gray-800 border-l-4 border-[#e92c5d] pl-4">{section.title}</h2>
         <Link to={getSectionLink()} className="text-[10px] md:text-sm font-bold text-[#e92c5d] flex items-center gap-1 hover:gap-2 transition-all uppercase tracking-tighter">View All Items <ArrowRight size={14} /></Link>
@@ -172,7 +172,7 @@ const GridSection: React.FC<{ section: HomeSection; products: Product[] }> = ({ 
   };
 
   return (
-    <section ref={containerRef} className="container mx-auto px-4 md:px-8 mb-6 md:mb-16">
+    <section ref={containerRef} className="max-w-[1680px] mx-auto px-4 md:px-8 mb-6 md:mb-16">
       <div className="flex justify-between items-end mb-6">
         <h2 className="text-lg md:text-2xl font-bold text-gray-800 border-l-4 border-[#e92c5d] pl-4">{section.title}</h2>
         <Link to={getSectionLink()} className="text-[10px] md:text-sm font-bold text-[#e92c5d] flex items-center gap-1 hover:gap-2 transition-all uppercase tracking-tighter">View All Items <ArrowRight size={14} /></Link>
@@ -358,7 +358,7 @@ const DoubleBannerSection: React.FC<{ section: HomeSection }> = ({ section }) =>
   if (!banner1?.imageUrl && !banner2?.imageUrl) return null;
 
   return (
-    <section className="container mx-auto px-4 md:px-8 mb-6 md:mb-16 animate-in fade-in duration-500">
+    <section className="max-w-[1680px] mx-auto px-4 md:px-8 mb-6 md:mb-16 animate-in fade-in duration-500">
       <div className="grid grid-cols-2 gap-3 md:gap-6">
         {banner1?.imageUrl && (
           banner1.link ? (
@@ -415,7 +415,7 @@ const TripleBannerSection: React.FC<{ section: HomeSection }> = ({ section }) =>
   if (activeBanners.length === 0) return null;
 
   return (
-    <section className="container mx-auto px-4 md:px-8 mb-6 md:mb-16 animate-in fade-in duration-500">
+    <section className="max-w-[1680px] mx-auto px-4 md:px-8 mb-6 md:mb-16 animate-in fade-in duration-500">
       {/* Desktop view (static 3 columns) */}
       <div className="hidden md:grid md:grid-cols-3 gap-6">
         {activeBanners.map((banner, index) => {
@@ -815,7 +815,7 @@ const Home: React.FC = () => {
       <HeroSection />
 
       {/* Features Bar */}
-      <section className="features-container container mx-auto px-4 md:px-8 mb-6 md:mb-12">
+      <section className="features-container max-w-[1680px] mx-auto px-4 md:px-8 mb-6 md:mb-12">
         <div className="bg-[#f7f8f3] rounded-2xl p-6 md:p-8">
           <div
             ref={scrollRef}

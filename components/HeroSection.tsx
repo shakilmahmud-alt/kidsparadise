@@ -1,25 +1,24 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   ChevronRight, 
   ChevronLeft, 
   Sparkles, 
   Car, 
-  Smile, 
   ShieldCheck, 
-  Box, 
   Shirt, 
   Layers, 
-  Search,
-  ArrowRight,
-  Menu,
-  ShoppingBag,
-  Rocket,
-  Star,
-  BookOpen,
-  Heart,
-  Package,
-  Award
+  Search, 
+  ArrowRight, 
+  Menu, 
+  ShoppingBag, 
+  Rocket, 
+  Star, 
+  BookOpen, 
+  Heart, 
+  Package, 
+  Award,
+  Tag
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Category } from '../types';
@@ -47,15 +46,15 @@ const buildCategoryTree = (categories: Category[], parentId: string | null = nul
 // Icons for the 8 Main Parent Categories
 const getMainCategoryIcon = (name: string) => {
   const lower = name.toLowerCase();
-  if (lower.includes('apparel') || lower.includes('cloth') || lower.includes('fashion')) return <Shirt size={19} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('toy') || lower.includes('lego')) return <Sparkles size={19} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('gear') || lower.includes('travel') || lower.includes('stroller')) return <Car size={19} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('care & hygiene') || lower.includes('hygiene') || lower.includes('bath') || lower.includes('skin')) return <ShieldCheck size={19} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('furniture') || lower.includes('bed')) return <Layers size={19} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('stationery')) return <BookOpen size={19} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('mother')) return <Heart size={19} className="text-[#556885]" strokeWidth={1.8} />;
-  if (lower.includes('other')) return <Package size={19} className="text-[#556885]" strokeWidth={1.8} />;
-  return <ShoppingBag size={19} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('apparel') || lower.includes('cloth') || lower.includes('fashion')) return <Shirt size={18} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('toy') || lower.includes('lego')) return <Sparkles size={18} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('gear') || lower.includes('travel') || lower.includes('stroller')) return <Car size={18} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('care & hygiene') || lower.includes('hygiene') || lower.includes('bath') || lower.includes('skin')) return <ShieldCheck size={18} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('furniture') || lower.includes('bed')) return <Layers size={18} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('stationery')) return <BookOpen size={18} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('mother')) return <Heart size={18} className="text-[#556885]" strokeWidth={1.8} />;
+  if (lower.includes('other')) return <Package size={18} className="text-[#556885]" strokeWidth={1.8} />;
+  return <ShoppingBag size={18} className="text-[#556885]" strokeWidth={1.8} />;
 };
 
 // Roll-Down Text Animation Button
@@ -70,11 +69,9 @@ const SlideDownButton: React.FC<{
       className={`group/btn relative inline-flex items-center justify-center px-7 py-3.5 rounded-md font-bold text-xs uppercase tracking-wider text-white shadow-lg transition-colors duration-300 overflow-hidden ${bgClass} hover:bg-black active:scale-95`}
     >
       <div className="relative overflow-hidden h-[16px] flex flex-col justify-center">
-        {/* 1st Text that slides down on hover */}
         <span className="inline-block transition-transform duration-300 ease-[cubic-bezier(0.2,1,0.3,1)] group-hover/btn:translate-y-full">
           {text}
         </span>
-        {/* 2nd Text that rolls down from top into place on hover */}
         <span className="absolute inset-0 inline-block -translate-y-full transition-transform duration-300 ease-[cubic-bezier(0.2,1,0.3,1)] group-hover/btn:translate-y-0">
           {text}
         </span>
@@ -84,10 +81,11 @@ const SlideDownButton: React.FC<{
 };
 
 export const HeroSection: React.FC = () => {
-  const { categories, searchQuery, setSearchQuery, products, brands } = useStore();
+  const { categories, searchQuery, setSearchQuery, products, attributes } = useStore();
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState<CategoryNode | null>(null);
   const [isHoveringBrands, setIsHoveringBrands] = useState(false);
+  const [brandSearch, setBrandSearch] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -121,9 +119,18 @@ export const HeroSection: React.FC = () => {
     });
   }, [categoryTree]);
 
-  const activeBrands = useMemo(() => {
-    return (brands || []).slice(0, 16);
-  }, [brands]);
+  // All Brands from database attributes (id: 3, name: 'Brands')
+  const allBrands = useMemo(() => {
+    const brandAttr = (attributes || []).find(a => a.name.toLowerCase() === 'brands');
+    if (!brandAttr || !brandAttr.values) return [];
+    
+    return [...brandAttr.values].sort((a, b) => a.value.localeCompare(b.value));
+  }, [attributes]);
+
+  const filteredBrands = useMemo(() => {
+    if (!brandSearch.trim()) return allBrands;
+    return allBrands.filter(b => b.value.toLowerCase().includes(brandSearch.toLowerCase().trim()));
+  }, [allBrands, brandSearch]);
 
   // 5 Kids Paradise Curated Banners matching exact 423x535px dimension
   const heroBanners = useMemo(() => [
@@ -194,12 +201,11 @@ export const HeroSection: React.FC = () => {
     }
   ], []);
 
-  // Card dimensions: exactly 423px width x 535px height, 16px gap
+  // Card dimensions: 423px width x 535px height, 16px gap
   const cardWidth = 423;
   const cardGap = 16;
   const slideStep = cardWidth + cardGap; // 439px
 
-  // Maximum slide steps (e.g. 0 to 2)
   const maxSlide = 2;
 
   const nextSlide = () => {
@@ -211,12 +217,12 @@ export const HeroSection: React.FC = () => {
   };
 
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || activeCategory || isHoveringBrands) return;
     const interval = setInterval(() => {
       nextSlide();
     }, 6000);
     return () => clearInterval(interval);
-  }, [isPaused, maxSlide]);
+  }, [isPaused, maxSlide, activeCategory, isHoveringBrands]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery || searchQuery.length < 2) return [];
@@ -235,7 +241,8 @@ export const HeroSection: React.FC = () => {
 
   return (
     <section className="w-full bg-[#f8f9fa] pt-4 pb-8 md:pb-12 font-sans overflow-x-clip">
-      <div className="container mx-auto px-4 md:px-8">
+      {/* Container aligned with logo boundary (max-w-[1680px]) */}
+      <div className="max-w-[1680px] mx-auto px-4 md:px-8">
 
         {/* Top Header Row: "Shop by" Header (#F0264C) + Search Input */}
         <div className="flex flex-col lg:flex-row items-stretch gap-4 mb-4">
@@ -251,7 +258,7 @@ export const HeroSection: React.FC = () => {
             <form onSubmit={handleSearchSubmit} className="flex items-center w-full h-[52px] bg-[#f0f2f5] rounded-md border border-gray-200/90 overflow-hidden focus-within:border-gray-400 focus-within:bg-white transition-all">
               <input
                 type="text"
-                placeholder="Search"
+                placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -308,20 +315,19 @@ export const HeroSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Body: Unified Viewport where Cards Slide UNDER the "Shop by" Menu (Image 2 & 4) */}
+        {/* Hero Body: Unified Viewport where Cards Slide UNDER the "Shop by" Menu */}
         <div 
-          className="relative min-h-[560px] overflow-visible"
+          className="relative min-h-[535px] overflow-visible"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
 
-          {/* 1. Left Side: Full Sidebar Menu (8 Categories + New Arrivals + Best Sellers + Brands) with High Z-Index */}
-          <div className="hidden lg:block absolute left-0 top-0 w-[270px] min-w-[270px] bg-white rounded-b-md border border-gray-200 shadow-md z-30">
+          {/* 1. Left Side: Full Sidebar Menu with Exact 535px Height Matching Slide Cards (Image 2) */}
+          <div className="hidden lg:flex flex-col justify-between absolute left-0 top-0 w-[270px] min-w-[270px] h-[535px] max-h-[535px] bg-white rounded-b-md border border-gray-200 shadow-md z-30 overflow-hidden">
             <nav className="divide-y divide-gray-100">
               
               {/* 8 Main Parent Categories */}
               {orderedParentCategories.map((cat, idx) => {
-                const hasChildren = cat.children && cat.children.length > 0;
                 const isHovered = activeCategory?.id === cat.id;
 
                 return (
@@ -332,17 +338,16 @@ export const HeroSection: React.FC = () => {
                       setActiveCategory(cat);
                       setIsHoveringBrands(false);
                     }}
-                    onMouseLeave={() => setActiveCategory(null)}
                   >
                     <Link
                       to={`/category/${cat.slug || encodeURIComponent(cat.name)}`}
-                      className={`flex items-center justify-between px-4 py-3 text-[14px] transition-colors ${
+                      className={`flex items-center justify-between px-4 py-2.5 text-[13.5px] transition-colors ${
                         isHovered 
-                          ? 'text-[#0072CE] font-bold bg-blue-50/50' 
+                          ? 'text-[#0072CE] font-bold bg-blue-50/60' 
                           : 'text-[#1d293f] font-semibold hover:text-[#0072CE]'
                       }`}
                     >
-                      <div className="flex items-center gap-3.5">
+                      <div className="flex items-center gap-3">
                         {getMainCategoryIcon(cat.name)}
                         <span className="truncate">{cat.name.replace(/&amp;/g, '&')}</span>
                       </div>
@@ -358,63 +363,9 @@ export const HeroSection: React.FC = () => {
                             New
                           </span>
                         )}
-                        <ChevronRight size={15} className={`transition-transform text-gray-400 ${isHovered ? 'text-[#0072CE] translate-x-0.5' : ''}`} />
+                        <ChevronRight size={14} className={`transition-transform text-gray-400 ${isHovered ? 'text-[#0072CE] translate-x-0.5' : ''}`} />
                       </div>
                     </Link>
-
-                    {/* Multi-Level Flyout Submenu on Hover */}
-                    {hasChildren && isHovered && (
-                      <div 
-                        className="absolute left-full top-0 ml-1 w-[560px] bg-white border border-gray-200 rounded-lg shadow-2xl p-6 z-50 animate-in fade-in duration-150 min-h-[420px]"
-                        onMouseEnter={() => setActiveCategory(cat)}
-                        onMouseLeave={() => setActiveCategory(null)}
-                      >
-                        <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100">
-                          <h3 className="font-extrabold text-base text-[#1d293f] flex items-center gap-2">
-                            {getMainCategoryIcon(cat.name)}
-                            {cat.name.replace(/&amp;/g, '&')}
-                          </h3>
-                          <Link 
-                            to={`/category/${cat.slug || encodeURIComponent(cat.name)}`}
-                            className="text-xs font-bold text-[#F0264C] hover:underline flex items-center gap-1"
-                          >
-                            View All <ArrowRight size={12} />
-                          </Link>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-6">
-                          {cat.children.map(subCat => (
-                            <div key={subCat.id} className="space-y-2">
-                              <Link
-                                to={`/category/${subCat.slug || encodeURIComponent(subCat.name)}`}
-                                className="font-bold text-sm text-[#1d293f] hover:text-[#0072CE] transition-colors flex items-center justify-between border-b border-gray-100 pb-1.5 group/sub"
-                              >
-                                <span>{subCat.name.replace(/&amp;/g, '&')}</span>
-                                {subCat.children && subCat.children.length > 0 && (
-                                  <span className="text-[10px] text-gray-400 group-hover/sub:text-[#0072CE]">({subCat.children.length})</span>
-                                )}
-                              </Link>
-
-                              {subCat.children && subCat.children.length > 0 && (
-                                <ul className="space-y-1.5 pl-1">
-                                  {subCat.children.map(subSubCat => (
-                                    <li key={subSubCat.id}>
-                                      <Link
-                                        to={`/category/${subSubCat.slug || encodeURIComponent(subSubCat.name)}`}
-                                        className="text-xs text-gray-600 hover:text-[#0072CE] transition-colors flex items-center gap-1.5 hover:translate-x-1 duration-150"
-                                      >
-                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
-                                        {subSubCat.name.replace(/&amp;/g, '&')}
-                                      </Link>
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -423,10 +374,10 @@ export const HeroSection: React.FC = () => {
               <Link
                 to="/products?filter=new"
                 onMouseEnter={() => { setActiveCategory(null); setIsHoveringBrands(false); }}
-                className="flex items-center justify-between px-4 py-3 text-[14px] font-semibold text-[#1d293f] hover:text-[#0072CE] hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between px-4 py-2.5 text-[13.5px] font-semibold text-[#1d293f] hover:text-[#0072CE] hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-center gap-3.5">
-                  <Rocket size={19} className="text-[#556885]" strokeWidth={1.8} />
+                <div className="flex items-center gap-3">
+                  <Rocket size={18} className="text-[#556885]" strokeWidth={1.8} />
                   <span>New Arrivals</span>
                 </div>
               </Link>
@@ -435,78 +386,184 @@ export const HeroSection: React.FC = () => {
               <Link
                 to="/products?filter=bestseller"
                 onMouseEnter={() => { setActiveCategory(null); setIsHoveringBrands(false); }}
-                className="flex items-center justify-between px-4 py-3 text-[14px] font-semibold text-[#1d293f] hover:text-[#0072CE] hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between px-4 py-2.5 text-[13.5px] font-semibold text-[#1d293f] hover:text-[#0072CE] hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-center gap-3.5">
-                  <Star size={19} className="text-[#556885]" strokeWidth={1.8} />
+                <div className="flex items-center gap-3">
+                  <Star size={18} className="text-[#556885]" strokeWidth={1.8} />
                   <span>Best Sellers</span>
                 </div>
               </Link>
 
-              {/* 11. Brands (With Flyout on Hover) */}
+              {/* 11. Brands (With Attributes Brands Flyout on Hover) */}
               <div
                 className="relative group/menuitem"
                 onMouseEnter={() => {
                   setIsHoveringBrands(true);
                   setActiveCategory(null);
                 }}
-                onMouseLeave={() => setIsHoveringBrands(false)}
               >
                 <Link
                   to="/products"
-                  className={`flex items-center justify-between px-4 py-3 text-[14px] transition-colors rounded-b-md ${
+                  className={`flex items-center justify-between px-4 py-2.5 text-[13.5px] transition-colors ${
                     isHoveringBrands 
-                      ? 'text-[#0072CE] font-bold bg-blue-50/50' 
+                      ? 'text-[#0072CE] font-bold bg-blue-50/60' 
                       : 'text-[#1d293f] font-semibold hover:text-[#0072CE]'
                   }`}
                 >
-                  <div className="flex items-center gap-3.5">
-                    <Award size={19} className="text-[#556885]" strokeWidth={1.8} />
+                  <div className="flex items-center gap-3">
+                    <Award size={18} className="text-[#556885]" strokeWidth={1.8} />
                     <span>Brands</span>
                   </div>
-                  <ChevronRight size={15} className={`transition-transform text-gray-400 ${isHoveringBrands ? 'text-[#0072CE] translate-x-0.5' : ''}`} />
+                  <ChevronRight size={14} className={`transition-transform text-gray-400 ${isHoveringBrands ? 'text-[#0072CE] translate-x-0.5' : ''}`} />
                 </Link>
-
-                {/* Brands Flyout on Hover */}
-                {isHoveringBrands && (
-                  <div 
-                    className="absolute left-full top-0 ml-1 w-[480px] bg-white border border-gray-200 rounded-lg shadow-2xl p-6 z-50 animate-in fade-in duration-150"
-                    onMouseEnter={() => setIsHoveringBrands(true)}
-                    onMouseLeave={() => setIsHoveringBrands(false)}
-                  >
-                    <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100">
-                      <h3 className="font-extrabold text-base text-[#1d293f] flex items-center gap-2">
-                        <Award size={18} className="text-[#F0264C]" />
-                        Official Brands
-                      </h3>
-                      <Link 
-                        to="/products" 
-                        className="text-xs font-bold text-[#F0264C] hover:underline flex items-center gap-1"
-                      >
-                        All Brands <ArrowRight size={12} />
-                      </Link>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      {activeBrands.map(b => (
-                        <Link
-                          key={b.id}
-                          to={`/products?brand=${b.slug || b.name}`}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 text-sm font-semibold text-gray-700 hover:text-[#0072CE] transition-colors border border-gray-100"
-                        >
-                          <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                          <span className="truncate">{b.name}</span>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
             </nav>
+
+            {/* Extra White Space filling the exact 535px height matching slides (Image 2) */}
+            <div className="flex-1 bg-white border-t border-gray-50 flex items-center justify-center p-3 text-[11px] text-gray-400">
+              <span className="truncate">KidsParadise Premium Store</span>
+            </div>
           </div>
 
-          {/* 2. Sliding Track: Starts next to the menu (left: 286px) and slides UNDER the menu when currentSlide > 0 */}
+          {/* 2. Full-Slide Flyout Mega Menu for Categories (Spans Entire Slide Area - Image 3) */}
+          {activeCategory && activeCategory.children && activeCategory.children.length > 0 && (
+            <div 
+              className="hidden lg:block absolute left-[270px] top-0 w-[calc(100%-270px)] h-[535px] pl-4 z-50 animate-in fade-in duration-150"
+              onMouseEnter={() => setActiveCategory(activeCategory)}
+              onMouseLeave={() => setActiveCategory(null)}
+            >
+              <div className="w-full h-full bg-white rounded-[20px] shadow-2xl p-8 border border-gray-200/80 flex flex-col">
+              {/* Flyout Header */}
+              <div className="flex items-center justify-between pb-4 mb-6 border-b border-gray-100 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#F0264C] flex items-center justify-center">
+                    {getMainCategoryIcon(activeCategory.name)}
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-xl text-[#1d293f] leading-tight">
+                      {activeCategory.name.replace(/&amp;/g, '&')}
+                    </h3>
+                    <p className="text-xs text-gray-400">Explore all collections and subcategories</p>
+                  </div>
+                </div>
+
+                <Link 
+                  to={`/category/${activeCategory.slug || encodeURIComponent(activeCategory.name)}`}
+                  className="px-5 py-2 rounded-lg bg-rose-50 hover:bg-[#F0264C] text-[#F0264C] hover:text-white font-bold text-xs transition-all flex items-center gap-2 shadow-sm"
+                  onClick={() => setActiveCategory(null)}
+                >
+                  View All Products <ArrowRight size={14} />
+                </Link>
+              </div>
+
+              {/* Multi-Column Grid of Sub-Categories and Sub-Sub-Categories */}
+              <div className="grid grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-6 overflow-y-auto max-h-[420px] pr-3 custom-scrollbar">
+                {activeCategory.children.map(subCat => (
+                  <div key={subCat.id} className="space-y-2.5">
+                    <Link
+                      to={`/category/${subCat.slug || encodeURIComponent(subCat.name)}`}
+                      className="font-bold text-[14.5px] text-[#1d293f] hover:text-[#0072CE] transition-colors flex items-center justify-between border-b border-gray-100 pb-1.5 group/sub"
+                      onClick={() => setActiveCategory(null)}
+                    >
+                      <span className="truncate">{subCat.name.replace(/&amp;/g, '&')}</span>
+                      {subCat.children && subCat.children.length > 0 && (
+                        <span className="text-[11px] text-gray-400 font-medium group-hover/sub:text-[#0072CE]">
+                          ({subCat.children.length})
+                        </span>
+                      )}
+                    </Link>
+
+                    {subCat.children && subCat.children.length > 0 && (
+                      <ul className="space-y-1.5 pl-1">
+                        {subCat.children.map(subSubCat => (
+                          <li key={subSubCat.id}>
+                            <Link
+                              to={`/category/${subSubCat.slug || encodeURIComponent(subSubCat.name)}`}
+                              className="text-xs text-gray-600 hover:text-[#0072CE] transition-colors flex items-center gap-2 hover:translate-x-1 duration-150 py-0.5"
+                              onClick={() => setActiveCategory(null)}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                              <span className="truncate">{subSubCat.name.replace(/&amp;/g, '&')}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 3. Full-Slide Flyout Mega Menu for Brands (Image 4 - Loaded from Project Attributes) */}
+          {isHoveringBrands && (
+            <div 
+              className="hidden lg:block absolute left-[270px] top-0 w-[calc(100%-270px)] h-[535px] pl-4 z-50 animate-in fade-in duration-150"
+              onMouseEnter={() => setIsHoveringBrands(true)}
+              onMouseLeave={() => setIsHoveringBrands(false)}
+            >
+              <div className="w-full h-full bg-white rounded-[20px] shadow-2xl p-8 border border-gray-200/80 flex flex-col">
+              {/* Flyout Header with Live Search */}
+              <div className="flex items-center justify-between pb-4 mb-5 border-b border-gray-100 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#F0264C] flex items-center justify-center">
+                    <Award size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-xl text-[#1d293f] leading-tight flex items-center gap-2">
+                      Official Brands
+                      <span className="text-xs font-bold text-[#F0264C] bg-rose-50 px-2 py-0.5 rounded-full">
+                        {allBrands.length} Brands
+                      </span>
+                    </h3>
+                    <p className="text-xs text-gray-400">Click any brand to filter and view all its authentic products</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  {/* Real-Time Brand Search Input */}
+                  <div className="relative w-[220px]">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search brands..."
+                      value={brandSearch}
+                      onChange={(e) => setBrandSearch(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 bg-gray-50 hover:bg-gray-100 focus:bg-white border border-gray-200 rounded-lg text-xs outline-none focus:border-[#F0264C] transition-all"
+                    />
+                  </div>
+
+                  <Link 
+                    to="/products"
+                    className="px-5 py-2 rounded-lg bg-rose-50 hover:bg-[#F0264C] text-[#F0264C] hover:text-white font-bold text-xs transition-all flex items-center gap-2 shadow-sm"
+                    onClick={() => setIsHoveringBrands(false)}
+                  >
+                    View All <ArrowRight size={14} />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Grid of All 79 Attribute Brands */}
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 overflow-y-auto max-h-[415px] pr-2 custom-scrollbar">
+                {filteredBrands.map((b) => (
+                  <Link
+                    key={b.id || b.value}
+                    to={`/products?brand=${encodeURIComponent(b.value)}&attr_Brands=${encodeURIComponent(b.value)}`}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 hover:bg-rose-50 border border-gray-100 hover:border-[#F0264C] text-[12.5px] font-semibold text-gray-700 hover:text-[#F0264C] transition-all group shadow-2xs truncate"
+                    onClick={() => setIsHoveringBrands(false)}
+                  >
+                    <Tag size={13} className="text-gray-400 group-hover:text-[#F0264C] transition-colors flex-shrink-0" />
+                    <span className="truncate">{b.value}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+          {/* 4. Sliding Track: Starts next to menu (left: 286px) and slides UNDER menu */}
           <div className="w-full lg:pl-[286px] overflow-visible">
             <div 
               className="flex transition-transform duration-700 ease-in-out gap-4 z-10"
@@ -522,7 +579,7 @@ export const HeroSection: React.FC = () => {
                 >
                   <div className={`relative w-full h-full rounded-[20px] overflow-hidden shadow-sm group select-none ${banner.bgColor}`}>
                     
-                    {/* CRYSTAL CLEAR Background Image */}
+                    {/* Background Image */}
                     <img
                       src={banner.image}
                       alt={banner.title}
@@ -574,7 +631,7 @@ export const HeroSection: React.FC = () => {
             </div>
           </div>
 
-          {/* 3. Slider Bottom Controls: Left/Right Arrow Buttons + Dot Indicators */}
+          {/* 5. Slider Bottom Controls: Left/Right Arrow Buttons + Dot Indicators */}
           <div className="flex items-center justify-between mt-4 px-1 lg:pl-[286px]">
             
             {/* Pagination Dots (0 to maxSlide) */}
