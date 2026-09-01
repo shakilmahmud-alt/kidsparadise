@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Upload, Search, Copy, Check, Trash2, ExternalLink, Image as ImageIcon, 
-  FileText, RefreshCw, AlertCircle, Eye, X, HardDrive, CheckCircle2, Film, Folder, Play
+  FileText, RefreshCw, AlertCircle, Eye, X, HardDrive, CheckCircle2, Film, Folder, Play,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react';
 import { MediaItem } from '../types';
 import { uploadToCpanel } from '../lib/cpanelUpload';
@@ -18,44 +19,100 @@ export const MediaManager: React.FC = () => {
   const [previewItem, setPreviewItem] = useState<MediaItem | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(100);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch all media items
-  const fetchMedia = async () => {
+  // Fetch paginated media items
+  const fetchMedia = useCallback(async (page: number = 1, search: string = searchQuery, filter: string = selectedFilter) => {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const res = await fetch('/api/media');
+      const queryParams = new URLSearchParams({
+        page: String(page),
+        limit: String(pageSize),
+        search: search.trim(),
+        filter: filter
+      });
+
+      const res = await fetch(`/api/media?${queryParams.toString()}`);
       if (res.ok) {
         const data = await res.json();
         if (data.media) {
           setMediaList(data.media);
+          setTotalItems(Number(data.total || data.media.length));
+          setTotalPages(Number(data.totalPages || Math.ceil((data.total || 1) / pageSize)));
+          setCurrentPage(page);
+          return;
         }
-      } else {
-        // Direct cPanel bridge fallback
-        const bridgeRes = await fetch('https://kidsparadise.com.bd/api.php', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-Secret': 'kidsparadise_jwt_secret_key_2026'
-          },
-          body: JSON.stringify({
-            action: 'query',
-            sql: 'SELECT * FROM media ORDER BY id DESC LIMIT 1000'
-          })
-        });
-        if (bridgeRes.ok) {
-          const bridgeData = await bridgeRes.json();
-          if (bridgeData.results) {
-            setMediaList(bridgeData.results.map((m: any) => ({
-              id: String(m.id),
-              name: m.name,
-              url: m.url,
-              fileType: m.file_type || 'image/jpeg',
-              size: Number(m.size || 0),
-              createdAt: m.created_at
-            })));
-          }
+      }
+
+      // Direct cPanel bridge fallback with MySQL pagination
+      let whereClause = 'WHERE 1=1';
+      const params: any[] = [];
+      if (search.trim()) {
+        whereClause += ` AND (name LIKE '%${search.trim()}%' OR url LIKE '%${search.trim()}%')`;
+      }
+      if (filter === 'video') {
+        whereClause += ' AND (file_type LIKE "%video%" OR url LIKE "%.mp4" OR url LIKE "%.webm" OR url LIKE "%.mov")';
+      } else if (filter === 'image') {
+        whereClause += ' AND (file_type LIKE "%image%" OR url LIKE "%.jpg" OR url LIKE "%.jpeg" OR url LIKE "%.png" OR url LIKE "%.webp")';
+      } else if (filter === 'products') {
+        whereClause += ' AND (url LIKE "%/products/%" OR name LIKE "%product%")';
+      } else if (filter === 'banners') {
+        whereClause += ' AND (url LIKE "%/banners/%" OR url LIKE "%slide%" OR name LIKE "%banner%")';
+      }
+
+      const offset = (page - 1) * pageSize;
+      const countRes = await fetch('https://kidsparadise.com.bd/api.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Secret': 'kidsparadise_jwt_secret_key_2026'
+        },
+        body: JSON.stringify({
+          action: 'query',
+          sql: `SELECT count(*) as total FROM media ${whereClause}`
+        })
+      });
+
+      let totalCount = 0;
+      if (countRes.ok) {
+        const countData = await countRes.json();
+        totalCount = Number(countData.results?.[0]?.total || 0);
+        setTotalItems(totalCount);
+        setTotalPages(Math.ceil(totalCount / pageSize) || 1);
+      }
+
+      const dataRes = await fetch('https://kidsparadise.com.bd/api.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Secret': 'kidsparadise_jwt_secret_key_2026'
+        },
+        body: JSON.stringify({
+          action: 'query',
+          sql: `SELECT * FROM media ${whereClause} ORDER BY id DESC LIMIT ${pageSize} OFFSET ${offset}`
+        })
+      });
+
+      if (dataRes.ok) {
+        const data = await dataRes.json();
+        if (data.results) {
+          setMediaList(data.results.map((m: any) => ({
+            id: String(m.id),
+            name: m.name,
+            url: m.url,
+            fileType: m.file_type || 'image/jpeg',
+            size: Number(m.size || 0),
+            createdAt: m.created_at
+          })));
+          setCurrentPage(page);
         }
       }
     } catch (err: any) {
@@ -64,11 +121,26 @@ export const MediaManager: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  }, [pageSize, searchQuery, selectedFilter]);
+
+  // Initial load
+  useEffect(() => {
+    fetchMedia(1, '', 'all');
+  }, []);
+
+  // Debounced search handler
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    fetchMedia(1, query, selectedFilter);
   };
 
-  useEffect(() => {
-    fetchMedia();
-  }, []);
+  // Filter change handler
+  const handleFilterChange = (filter: 'all' | 'image' | 'video' | 'products' | 'banners') => {
+    setSelectedFilter(filter);
+    setCurrentPage(1);
+    fetchMedia(1, searchQuery, filter);
+  };
 
   // Handle file uploads
   const handleFileUpload = async (files: FileList | null) => {
@@ -135,6 +207,7 @@ export const MediaManager: React.FC = () => {
         };
 
         setMediaList(prev => [newItem, ...prev]);
+        setTotalItems(prev => prev + 1);
         successfulCount++;
       } catch (err: any) {
         console.error(`Error uploading ${file.name}:`, err);
@@ -149,6 +222,7 @@ export const MediaManager: React.FC = () => {
     if (successfulCount > 0) {
       setSuccessMessage(`Successfully uploaded ${successfulCount} file(s) directly to cPanel!`);
       setTimeout(() => setSuccessMessage(null), 4000);
+      fetchMedia(1, searchQuery, selectedFilter);
     }
   };
 
@@ -178,6 +252,7 @@ export const MediaManager: React.FC = () => {
         })
       });
       setMediaList(prev => prev.filter(m => m.id !== id));
+      setTotalItems(prev => Math.max(0, prev - 1));
       if (previewItem?.id === id) setPreviewItem(null);
     } catch (err: any) {
       alert('Error deleting media: ' + err.message);
@@ -193,23 +268,6 @@ export const MediaManager: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
-  // Filtered media list
-  const filteredList = mediaList.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.url.toLowerCase().includes(searchQuery.toLowerCase());
-    if (!matchesSearch) return false;
-
-    const isVideo = item.fileType.startsWith('video/') || /\.(mp4|webm|mov|avi)$/i.test(item.url);
-    const isImage = item.fileType.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(item.url);
-
-    if (selectedFilter === 'image') return isImage && !isVideo;
-    if (selectedFilter === 'video') return isVideo;
-    if (selectedFilter === 'products') return item.url.includes('/products/') || item.name.toLowerCase().includes('product');
-    if (selectedFilter === 'banners') return item.url.includes('/banners/') || item.url.includes('slide') || item.name.toLowerCase().includes('banner');
-
-    return true;
-  });
-
   return (
     <div className="space-y-8 animate-in fade-in duration-500 font-sans text-slate-800">
       
@@ -221,11 +279,11 @@ export const MediaManager: React.FC = () => {
               cPanel Media Library
             </h2>
             <span className="bg-rose-50 text-[#F0264C] font-bold text-xs px-3 py-1 rounded-full border border-rose-100">
-              {mediaList.length} cPanel Files
+              {totalItems.toLocaleString()} Total Files
             </span>
           </div>
           <p className="text-sm text-gray-500 mt-1">
-            Upload files directly to your cPanel hosting (<code className="text-xs bg-gray-100 px-1 py-0.5 rounded font-mono">/public_html/uploads/</code>) and access all existing assets.
+            Browse and manage all {totalItems.toLocaleString()} files on your cPanel server (<code className="text-xs bg-gray-100 px-1 py-0.5 rounded font-mono">/public_html/uploads/</code> & <code className="text-xs bg-gray-100 px-1 py-0.5 rounded font-mono">wp-content/uploads/</code>).
           </p>
         </div>
 
@@ -236,7 +294,7 @@ export const MediaManager: React.FC = () => {
           </div>
 
           <button
-            onClick={fetchMedia}
+            onClick={() => fetchMedia(currentPage, searchQuery, selectedFilter)}
             disabled={isLoading}
             className="p-2.5 rounded-xl border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all cursor-pointer"
             title="Refresh Library"
@@ -295,7 +353,7 @@ export const MediaManager: React.FC = () => {
 
           <div>
             <h4 className="text-lg font-bold text-gray-800">
-              {isUploading ? 'Uploading to cPanel...' : 'Drag & drop files here, or browse from computer'}
+              {isUploading ? 'Uploading directly to cPanel...' : 'Drag & drop files here, or browse from computer'}
             </h4>
             <p className="text-xs text-gray-500 mt-1">
               Supports Images (JPG, PNG, WEBP, GIF, SVG), Videos (MP4, WEBM, MOV), and PDFs.
@@ -343,9 +401,9 @@ export const MediaManager: React.FC = () => {
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search cPanel media files by name or URL..."
+            placeholder="Search all 5,378+ cPanel files..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:border-[#F0264C] focus:bg-white transition-all"
           />
         </div>
@@ -353,7 +411,7 @@ export const MediaManager: React.FC = () => {
         {/* Filter Buttons */}
         <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
           {[
-            { id: 'all', label: 'All cPanel Files' },
+            { id: 'all', label: 'All Files' },
             { id: 'image', label: 'Images' },
             { id: 'video', label: 'Videos' },
             { id: 'products', label: 'Products' },
@@ -361,7 +419,7 @@ export const MediaManager: React.FC = () => {
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setSelectedFilter(tab.id as any)}
+              onClick={() => handleFilterChange(tab.id as any)}
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 selectedFilter === tab.id
                   ? 'bg-rose-50 text-[#F0264C] border border-rose-200 shadow-2xs'
@@ -374,13 +432,23 @@ export const MediaManager: React.FC = () => {
         </div>
       </div>
 
+      {/* Top Pagination Summary */}
+      <div className="flex items-center justify-between text-xs text-gray-500 px-1">
+        <div>
+          Showing <span className="font-bold text-gray-800">{Math.min((currentPage - 1) * pageSize + 1, totalItems)}</span> - <span className="font-bold text-gray-800">{Math.min(currentPage * pageSize, totalItems)}</span> of <span className="font-bold text-[#F0264C]">{totalItems.toLocaleString()}</span> cPanel files
+        </div>
+        <div className="text-gray-400">
+          Page <span className="font-bold text-gray-700">{currentPage}</span> of <span className="font-bold text-gray-700">{totalPages}</span> (100 per page)
+        </div>
+      </div>
+
       {/* Media Grid */}
       {isLoading ? (
         <div className="bg-white rounded-2xl p-16 text-center border border-gray-100 shadow-xs">
           <RefreshCw size={32} className="animate-spin text-[#F0264C] mx-auto mb-3" />
-          <p className="text-sm font-semibold text-gray-500">Loading all cPanel media files...</p>
+          <p className="text-sm font-semibold text-gray-500">Loading page {currentPage} of cPanel media files...</p>
         </div>
-      ) : filteredList.length === 0 ? (
+      ) : mediaList.length === 0 ? (
         <div className="bg-white rounded-2xl p-16 text-center border border-gray-100 shadow-xs">
           <ImageIcon size={40} className="text-gray-300 mx-auto mb-3" />
           <h4 className="text-base font-bold text-gray-700">No media files found</h4>
@@ -388,7 +456,7 @@ export const MediaManager: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {filteredList.map((item) => {
+          {mediaList.map((item) => {
             const isVideo = item.fileType.startsWith('video/') || /\.(mp4|webm|mov|avi)$/i.test(item.url);
             const isImage = (item.fileType.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(item.url)) && !isVideo;
             const isCopied = copiedId === item.id;
@@ -500,6 +568,86 @@ export const MediaManager: React.FC = () => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination Controls Bar */}
+      {totalPages > 1 && (
+        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-xs text-gray-500">
+            Page <span className="font-bold text-gray-800">{currentPage}</span> of <span className="font-bold text-gray-800">{totalPages}</span> ({totalItems.toLocaleString()} total items)
+          </div>
+
+          <div className="flex items-center gap-1">
+            {/* First Page */}
+            <button
+              onClick={() => fetchMedia(1, searchQuery, selectedFilter)}
+              disabled={currentPage === 1 || isLoading}
+              className="p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:hover:bg-white cursor-pointer"
+              title="First Page"
+            >
+              <ChevronsLeft size={16} />
+            </button>
+
+            {/* Prev Page */}
+            <button
+              onClick={() => fetchMedia(Math.max(1, currentPage - 1), searchQuery, selectedFilter)}
+              disabled={currentPage === 1 || isLoading}
+              className="p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:hover:bg-white cursor-pointer"
+              title="Previous Page"
+            >
+              <ChevronLeft size={16} />
+            </button>
+
+            {/* Page Numbers */}
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum = currentPage;
+              if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+
+              if (pageNum < 1 || pageNum > totalPages) return null;
+
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => fetchMedia(pageNum, searchQuery, selectedFilter)}
+                  disabled={isLoading}
+                  className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    currentPage === pageNum
+                      ? 'bg-[#F0264C] text-white shadow-xs'
+                      : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            {/* Next Page */}
+            <button
+              onClick={() => fetchMedia(Math.min(totalPages, currentPage + 1), searchQuery, selectedFilter)}
+              disabled={currentPage === totalPages || isLoading}
+              className="p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:hover:bg-white cursor-pointer"
+              title="Next Page"
+            >
+              <ChevronRight size={16} />
+            </button>
+
+            {/* Last Page */}
+            <button
+              onClick={() => fetchMedia(totalPages, searchQuery, selectedFilter)}
+              disabled={currentPage === totalPages || isLoading}
+              className="p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:hover:bg-white cursor-pointer"
+              title="Last Page"
+            >
+              <ChevronsRight size={16} />
+            </button>
+          </div>
         </div>
       )}
 

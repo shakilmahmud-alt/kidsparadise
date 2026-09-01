@@ -499,12 +499,42 @@ export default async function handler(req, res) {
       }
     }
 
-    // 12. Media Library CRUD
+    // 12. Media Library CRUD with 100-per-page Pagination & Search
     if (path.startsWith('/api/media') || path.includes('/media')) {
       if (method === 'GET') {
-        const rows = await query('SELECT * FROM media ORDER BY id DESC LIMIT 1000');
-        const countRes = await query('SELECT count(*) as total FROM media');
-        const totalCount = countRes[0]?.total || rows.length;
+        const urlObj = new URL(req.url, 'http://localhost');
+        const page = Math.max(1, parseInt(urlObj.searchParams.get('page') || req.query?.page || '1'));
+        const limit = Math.min(100, Math.max(10, parseInt(urlObj.searchParams.get('limit') || req.query?.limit || '100')));
+        const search = (urlObj.searchParams.get('search') || req.query?.search || '').trim();
+        const filter = (urlObj.searchParams.get('filter') || req.query?.filter || 'all').trim();
+        const offset = (page - 1) * limit;
+
+        let whereClause = 'WHERE 1=1';
+        const params = [];
+
+        if (search) {
+          whereClause += ' AND (name LIKE ? OR url LIKE ?)';
+          params.push(`%${search}%`, `%${search}%`);
+        }
+
+        if (filter === 'video') {
+          whereClause += ' AND (file_type LIKE "%video%" OR url LIKE "%.mp4" OR url LIKE "%.webm" OR url LIKE "%.mov")';
+        } else if (filter === 'image') {
+          whereClause += ' AND (file_type LIKE "%image%" OR url LIKE "%.jpg" OR url LIKE "%.jpeg" OR url LIKE "%.png" OR url LIKE "%.webp" OR url LIKE "%.gif")';
+        } else if (filter === 'products') {
+          whereClause += ' AND (url LIKE "%/products/%" OR name LIKE "%product%")';
+        } else if (filter === 'banners') {
+          whereClause += ' AND (url LIKE "%/banners/%" OR url LIKE "%slide%" OR name LIKE "%banner%")';
+        }
+
+        const countQuery = `SELECT COUNT(*) as total FROM media ${whereClause}`;
+        const countRes = await query(countQuery, params);
+        const total = Number(countRes[0]?.total || 0);
+        const totalPages = Math.ceil(total / limit) || 1;
+
+        const dataQuery = `SELECT * FROM media ${whereClause} ORDER BY id DESC LIMIT ? OFFSET ?`;
+        const rows = await query(dataQuery, [...params, limit, offset]);
+
         const formattedMedia = rows.map(m => ({
           id: String(m.id),
           name: m.name,
@@ -513,7 +543,15 @@ export default async function handler(req, res) {
           size: Number(m.size || 0),
           createdAt: m.created_at
         }));
-        return res.status(200).json({ success: true, media: formattedMedia, total: totalCount });
+
+        return res.status(200).json({
+          success: true,
+          media: formattedMedia,
+          total,
+          page,
+          limit,
+          totalPages
+        });
       }
 
       if (method === 'POST') {

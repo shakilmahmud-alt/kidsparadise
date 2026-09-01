@@ -18,36 +18,59 @@ export const uploadToCpanel = async (file: File, folder: string = 'media'): Prom
   const base64 = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (e) => reject(new Error('Failed to read file for upload'));
+    reader.onerror = () => reject(new Error('Failed to read file for upload'));
     reader.readAsDataURL(file);
   });
 
-  // 2. Post directly to cPanel api.php
-  const res = await fetch('https://kidsparadise.com.bd/api.php', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Secret': 'kidsparadise_jwt_secret_key_2026'
-    },
-    body: JSON.stringify({
-      action: 'upload',
-      name: file.name,
-      folder: targetFolder,
-      file: base64
-    })
-  });
+  const payload = {
+    action: 'upload',
+    name: file.name,
+    folder: targetFolder,
+    file: base64
+  };
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`cPanel Upload Error (HTTP ${res.status}): ${text || 'Please update api.php on cPanel'}`);
+  // 2. Try direct post to cPanel api.php
+  try {
+    const res = await fetch('https://kidsparadise.com.bd/api.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Secret': 'kidsparadise_jwt_secret_key_2026'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.url) {
+        return data.url;
+      }
+    }
+  } catch (directErr) {
+    console.warn('Direct cPanel fetch encountered an issue, trying /api/upload proxy...', directErr);
   }
 
-  const data = await res.json();
-  if (data.success && data.url) {
-    return data.url;
+  // 3. Fallback to /api/upload server proxy
+  try {
+    const proxyRes = await fetch('/api/upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (proxyRes.ok) {
+      const proxyData = await proxyRes.json();
+      if (proxyData.success && proxyData.url) {
+        return proxyData.url;
+      }
+    }
+  } catch (proxyErr) {
+    console.error('Proxy upload failed:', proxyErr);
   }
 
-  throw new Error(data.error || 'Failed to save file in cPanel uploads/' + targetFolder);
+  throw new Error(`Failed to upload ${file.name} to cPanel /uploads/${targetFolder}/`);
 };
 
 export default uploadToCpanel;

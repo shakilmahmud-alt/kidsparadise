@@ -4,10 +4,16 @@
  * Deploy this file to your cPanel public_html/api.php
  */
 
+@ini_set('upload_max_filesize', '256M');
+@ini_set('post_max_size', '256M');
+@ini_set('memory_limit', '512M');
+@ini_set('max_execution_time', '600');
+
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Secret');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Secret, X-Requested-With, Origin, Accept');
+header('Access-Control-Max-Age: 86400');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
