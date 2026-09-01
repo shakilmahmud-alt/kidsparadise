@@ -93,7 +93,7 @@ const CategoryPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const currentOrderBy = searchParams.get('orderby') || 'default';
+  const currentOrderBy = searchParams.get('orderby') || 'price';
 
   // Toggle collapsible section
   const toggleSection = (key: string) => {
@@ -468,27 +468,27 @@ const CategoryPage: React.FC = () => {
 
   const sortedProducts = useMemo(() => {
     const sorted = [...filteredProducts].sort((a, b) => {
-      const order = currentOrderBy || '';
+      const order = currentOrderBy || 'price';
       
       const priceA = typeof a.price === 'number' ? a.price : Number(a.price) || 0;
       const priceB = typeof b.price === 'number' ? b.price : Number(b.price) || 0;
       const pA = isNaN(priceA) ? 0 : priceA;
       const pB = isNaN(priceB) ? 0 : priceB;
 
-      if (order.includes('price-desc')) return pA < pB ? 1 : (pA > pB ? -1 : 0);
-      if (order.includes('price')) return pA < pB ? -1 : (pA > pB ? 1 : 0);
+      if (order === 'price-desc') return pA < pB ? 1 : (pA > pB ? -1 : 0);
+      if (order === 'price' || order === 'default') return pA < pB ? -1 : (pA > pB ? 1 : 0);
       
-      if (order.includes('rating')) {
+      if (order === 'rating') {
         const avgA = reviews.filter(r => r.productId === a.id).reduce((sum, r, _, arr) => sum + r.rating / arr.length, 0);
         const avgB = reviews.filter(r => r.productId === b.id).reduce((sum, r, _, arr) => sum + r.rating / arr.length, 0);
         return avgA < avgB ? 1 : (avgA > avgB ? -1 : 0);
       }
-      if (order.includes('date')) {
+      if (order === 'date') {
         const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
         const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
         return dateA < dateB ? 1 : (dateA > dateB ? -1 : 0);
       }
-      return 0; // Default Sorting
+      return pA < pB ? -1 : (pA > pB ? 1 : 0); // Default: Price Low to High
     });
     
     return sorted;
@@ -677,7 +677,7 @@ const CategoryPage: React.FC = () => {
             </div>
 
             {!collapsedSections['category'] && (
-              <div className="pt-3 space-y-2.5 max-h-56 overflow-y-auto pr-1">
+              <div data-lenis-prevent="true" className="pt-3 space-y-2 max-h-52 overflow-y-auto overscroll-contain pr-2 custom-scrollbar">
                 {subcategoryTree.map(sub => {
                   const count = subcategoryCounts[sub.id] || 0;
                   return (
@@ -685,10 +685,10 @@ const CategoryPage: React.FC = () => {
                       key={sub.id}
                       to={`/category/${sub.slug || encodeURIComponent(sub.name)}`}
                       onClick={() => isMobile && setIsFilterOpen(false)}
-                      className="flex items-center justify-between cursor-pointer select-none group"
+                      className="flex items-center justify-between cursor-pointer select-none group py-1 px-1 rounded hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-4.5 h-4.5 rounded-[4px] border border-gray-200 bg-gray-100 group-hover:border-[#F0264C] flex items-center justify-center transition-all"></div>
+                        <div className="w-4 h-4 rounded-[4px] border border-gray-300 bg-gray-100 group-hover:border-[#F0264C] flex items-center justify-center transition-all"></div>
                         <span className="text-[13px] text-gray-700 font-medium group-hover:text-[#F0264C] transition-colors truncate max-w-[180px]">
                           {sub.name.replace(/&amp;/g, '&')}
                         </span>
@@ -757,8 +757,8 @@ const CategoryPage: React.FC = () => {
                       })}
                     </div>
                   ) : (
-                    /* Standard Checkbox List */
-                    <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                    /* Standard Checkbox List with Lenis Prevent Scrolling */
+                    <div data-lenis-prevent="true" className="space-y-2 max-h-52 overflow-y-auto overscroll-contain pr-2 custom-scrollbar">
                       {values.map(val => {
                         const isChecked = selectedAttributes[attrName]?.includes(val) || false;
                         const count = getAttributeCount(attrName, val);
@@ -766,7 +766,7 @@ const CategoryPage: React.FC = () => {
                         return (
                           <label 
                             key={val}
-                            className="flex items-center justify-between cursor-pointer select-none group"
+                            className="flex items-center justify-between cursor-pointer select-none group py-1 px-1 rounded hover:bg-gray-50 transition-colors"
                             onClick={() => {
                               toggleAttribute(attrName, val);
                               if (isMobile) setIsFilterOpen(false);
@@ -780,13 +780,13 @@ const CategoryPage: React.FC = () => {
                                   onChange={() => {}}
                                   className="peer sr-only"
                                 />
-                                <div className={`w-4.5 h-4.5 rounded-[4px] border flex items-center justify-center transition-all ${
+                                <div className={`w-4 h-4 rounded-[4px] border flex items-center justify-center transition-all ${
                                   isChecked 
                                     ? 'bg-[#F0264C] border-[#F0264C]' 
-                                    : 'bg-gray-100 border-gray-200 group-hover:border-gray-300'
+                                    : 'bg-gray-100 border-gray-300 group-hover:border-gray-400'
                                 }`}>
                                   {isChecked && (
-                                    <Check size={12} strokeWidth={3} className="text-white" />
+                                    <Check size={11} strokeWidth={3} className="text-white" />
                                   )}
                                 </div>
                               </div>

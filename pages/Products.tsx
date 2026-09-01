@@ -116,7 +116,7 @@ const Products: React.FC = () => {
   
   const observerRef = useRef<IntersectionObserver | null>(null);
   
-  const currentOrderBy = searchParams.get('orderby') || 'default';
+  const currentOrderBy = searchParams.get('orderby') || 'price';
   const selectedCategory = searchParams.get('category') || 'All';
 
   // Derived state from URL
@@ -386,27 +386,27 @@ const Products: React.FC = () => {
 
   const sortedProducts = useMemo(() => {
     const sorted = [...filteredProducts].sort((a, b) => {
-      const order = currentOrderBy || '';
+      const order = currentOrderBy || 'price';
       
       const priceA = typeof a.price === 'number' ? a.price : Number(a.price) || 0;
       const priceB = typeof b.price === 'number' ? b.price : Number(b.price) || 0;
       const pA = isNaN(priceA) ? 0 : priceA;
       const pB = isNaN(priceB) ? 0 : priceB;
 
-      if (order.includes('price-desc')) return pA < pB ? 1 : (pA > pB ? -1 : 0);
-      if (order.includes('price')) return pA < pB ? -1 : (pA > pB ? 1 : 0);
+      if (order === 'price-desc') return pA < pB ? 1 : (pA > pB ? -1 : 0);
+      if (order === 'price' || order === 'default') return pA < pB ? -1 : (pA > pB ? 1 : 0);
       
-      if (order.includes('rating')) {
+      if (order === 'rating') {
         const avgA = reviews.filter(r => r.productId === a.id).reduce((sum, r, _, arr) => sum + r.rating / arr.length, 0);
         const avgB = reviews.filter(r => r.productId === b.id).reduce((sum, r, _, arr) => sum + r.rating / arr.length, 0);
         return avgA < avgB ? 1 : (avgA > avgB ? -1 : 0);
       }
-      if (order.includes('date')) {
+      if (order === 'date') {
         const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
         const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
         return dateA < dateB ? 1 : (dateA > dateB ? -1 : 0);
       }
-      return 0; // Default Sorting
+      return pA < pB ? -1 : (pA > pB ? 1 : 0); // Default: Price Low to High
     });
     
     return sorted;
