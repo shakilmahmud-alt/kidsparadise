@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   ChevronRight, 
@@ -92,21 +92,6 @@ export const HeroSection: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
-  // Exact measurement of the inner container bounds
-  const headerRowRef = useRef<HTMLDivElement>(null);
-  const [innerContentWidth, setInnerContentWidth] = useState(0);
-
-  useEffect(() => {
-    const measure = () => {
-      if (headerRowRef.current) {
-        setInnerContentWidth(headerRowRef.current.clientWidth);
-      }
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
-
   const categoryTree = useMemo(() => {
     return buildCategoryTree(categories);
   }, [categories]);
@@ -140,7 +125,7 @@ export const HeroSection: React.FC = () => {
     return (brands || []).slice(0, 16);
   }, [brands]);
 
-  // 3 Primary Hero Banners in the creative sliding set
+  // 5 Kids Paradise Curated Banners matching exact 423x535px dimension
   const heroBanners = useMemo(() => [
     {
       id: 1,
@@ -180,43 +165,42 @@ export const HeroSection: React.FC = () => {
       link: '/category/dolls-accessories',
       image: 'https://images.unsplash.com/photo-1558877385-81a1c7e67d72?auto=format&fit=crop&w=800&q=95',
       bgColor: 'bg-[#4a5568]'
+    },
+    {
+      id: 4,
+      badgeText: 'PREMIUM',
+      badgeColor: 'bg-[#FFE600] text-black',
+      tag: 'Newborn Feeding Essentials',
+      subtitle: 'BPA-Free Bottles & Mother Care Picks',
+      title: 'Baby Care Made Easy',
+      btnText: 'Shop Baby Care',
+      btnBg: 'bg-[#B81432]',
+      link: '/category/feeding-nursing',
+      image: 'https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?auto=format&fit=crop&w=800&q=95',
+      bgColor: 'bg-[#0066cc]'
+    },
+    {
+      id: 5,
+      badgeText: 'BEST VALUE',
+      badgeColor: 'bg-emerald-500 text-white',
+      tag: 'Early Learning STEM Sets',
+      subtitle: 'Inspire Creativity & Brain Development',
+      title: 'Smart Learning Blocks',
+      btnText: 'Explore Blocks',
+      btnBg: 'bg-[#F0264C]',
+      link: '/category/blocks',
+      image: 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?auto=format&fit=crop&w=800&q=95',
+      bgColor: 'bg-[#4b5563]'
     }
   ], []);
 
-  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
-  const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
+  // Card dimensions: exactly 423px width x 535px height, 16px gap
+  const cardWidth = 423;
+  const cardGap = 16;
+  const slideStep = cardWidth + cardGap; // 439px
 
-  // The sidebar menu width is 270px + 16px gap = 286px.
-  // The available width for the 3 cards between the menu and the right margin is:
-  // availableWidth = innerContentWidth - 286px.
-  // Each card width = (availableWidth - 2 * 16px) / 3 = (availableWidth - 32) / 3.
-  const cardWidth = useMemo(() => {
-    if (!innerContentWidth) return 380;
-    if (isDesktop) {
-      const availableForCards = Math.max(0, innerContentWidth - 286);
-      return Math.floor((availableForCards - 32) / 3);
-    }
-    if (isTablet) {
-      return Math.floor((innerContentWidth - 16) / 2);
-    }
-    return innerContentWidth;
-  }, [innerContentWidth, isDesktop, isTablet]);
-
-  // Creative Sliding Mechanism (User Requested):
-  // Slide 0 (Image 1 / Default): translateX(0px).
-  // Cards 1, 2, 3 fill 100% of the space from the menu to the container right margin!
-  // Card 3 touches the RIGHT MARGIN with 0px gap!
-  // Slide 1 (Image 2 / Slid): translateX(-286px).
-  // The cards slide left by 286px underneath the "Shop by" menu.
-  // Card 1 touches the LEFT MARGIN (0px) under the menu, and the right side becomes 286px FAKA (EMPTY)!
-  const getTransformX = (slideIdx: number) => {
-    if (!isDesktop) {
-      return slideIdx * (cardWidth + 16);
-    }
-    return slideIdx === 0 ? 0 : 286;
-  };
-
-  const maxSlide = isDesktop ? 1 : 2;
+  // Maximum slide steps (e.g. 0 to 2)
+  const maxSlide = 2;
 
   const nextSlide = () => {
     setCurrentSlide(prev => (prev >= maxSlide ? 0 : prev + 1));
@@ -250,11 +234,11 @@ export const HeroSection: React.FC = () => {
   };
 
   return (
-    <section className="w-full bg-[#f8f9fa] pt-4 pb-8 md:pb-12 font-sans overflow-hidden">
+    <section className="w-full bg-[#f8f9fa] pt-4 pb-8 md:pb-12 font-sans overflow-x-clip">
       <div className="container mx-auto px-4 md:px-8">
 
-        {/* Top Header Row: "Shop by" Header (#F0264C) + Search Input (Defines exact container inner width) */}
-        <div ref={headerRowRef} className="flex flex-col lg:flex-row items-stretch gap-4 mb-4">
+        {/* Top Header Row: "Shop by" Header (#F0264C) + Search Input */}
+        <div className="flex flex-col lg:flex-row items-stretch gap-4 mb-4">
           
           {/* "Shop by" Header Box */}
           <div className="hidden lg:flex w-[270px] min-w-[270px] items-center justify-between bg-[#F0264C] text-white px-5 py-3.5 rounded-t-md font-bold tracking-tight shadow-sm flex-shrink-0">
@@ -324,9 +308,9 @@ export const HeroSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Body: Unified Viewport where Cards Touch Right Margin by Default & Slide Under Menu to Left Margin */}
+        {/* Hero Body: Unified Viewport where Cards Slide UNDER the "Shop by" Menu (Image 2 & 4) */}
         <div 
-          className="relative min-h-[560px] overflow-hidden"
+          className="relative min-h-[560px] overflow-visible"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
@@ -522,12 +506,12 @@ export const HeroSection: React.FC = () => {
             </nav>
           </div>
 
-          {/* 2. Sliding Track: Starts at pl-[286px]. Exactly 3 cards fill 100% of available width to the right margin! */}
+          {/* 2. Sliding Track: Starts next to the menu (left: 286px) and slides UNDER the menu when currentSlide > 0 */}
           <div className="w-full lg:pl-[286px] overflow-visible">
             <div 
               className="flex transition-transform duration-700 ease-in-out gap-4 z-10"
               style={{
-                transform: `translateX(-${getTransformX(currentSlide)}px)`
+                transform: `translateX(-${currentSlide * slideStep}px)`
               }}
             >
               {heroBanners.map((banner) => (
