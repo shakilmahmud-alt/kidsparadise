@@ -19,8 +19,7 @@ import {
   BookOpen,
   Heart,
   Package,
-  Award,
-  Globe
+  Award
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Category } from '../types';
@@ -59,7 +58,7 @@ const getMainCategoryIcon = (name: string) => {
   return <ShoppingBag size={19} className="text-[#556885]" strokeWidth={1.8} />;
 };
 
-// Roll-Down Text Animation Button (User Requested)
+// Roll-Down Text Animation Button
 const SlideDownButton: React.FC<{
   to: string;
   text: string;
@@ -93,12 +92,26 @@ export const HeroSection: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
+  // Dynamic measurement to ensure 3 cards perfectly reach the right margin by default
+  const sliderViewportRef = useRef<HTMLDivElement>(null);
+  const [sliderWidth, setSliderWidth] = useState(0);
+
+  useEffect(() => {
+    const measureWidth = () => {
+      if (sliderViewportRef.current) {
+        setSliderWidth(sliderViewportRef.current.clientWidth);
+      }
+    };
+    measureWidth();
+    window.addEventListener('resize', measureWidth);
+    return () => window.removeEventListener('resize', measureWidth);
+  }, []);
+
   const categoryTree = useMemo(() => {
     return buildCategoryTree(categories);
   }, [categories]);
 
-  // Order parent categories exactly matching:
-  // 1. Apparels, 2. Toys, 3. Gear & Travel, 4. Care & Hygiene, 5. Furniture & Bedding, 6. Stationery, 7. Mother Care, 8. Others
+  // Order parent categories exactly: 1. Apparels, 2. Toys, 3. Gear & Travel, 4. Care & Hygiene, 5. Furniture & Bedding, 6. Stationery, 7. Mother Care, 8. Others
   const orderedParentCategories = useMemo(() => {
     const order = [
       'apparels',
@@ -123,12 +136,11 @@ export const HeroSection: React.FC = () => {
     });
   }, [categoryTree]);
 
-  // Clean list of brands for flyout
   const activeBrands = useMemo(() => {
     return (brands || []).slice(0, 16);
   }, [brands]);
 
-  // 5 Crystal Clear Kids Paradise Product Banners (Width 423px x Height 535px)
+  // 5 Crystal Clear Kids Paradise Product Banners
   const heroBanners = useMemo(() => [
     {
       id: 1,
@@ -197,8 +209,25 @@ export const HeroSection: React.FC = () => {
     }
   ], []);
 
-  // Max slide index (5 banners total - 3 visible in viewport = max slide index 2, or cycle 0 to 2)
-  const maxSlide = Math.max(0, heroBanners.length - 3);
+  // Calculate card width dynamically so 3 cards reach the exact right margin by default:
+  // Visible cards on desktop = 3. Gap = 16px. Total gaps = 2 * 16 = 32px.
+  // Card width = (sliderWidth - 32) / 3.
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
+  const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
+
+  const cardWidth = useMemo(() => {
+    if (!sliderWidth) return 380;
+    if (isDesktop) {
+      return (sliderWidth - 32) / 3;
+    }
+    if (isTablet) {
+      return (sliderWidth - 16) / 2;
+    }
+    return sliderWidth;
+  }, [sliderWidth, isDesktop, isTablet]);
+
+  const slideStep = cardWidth + 16;
+  const maxSlide = Math.max(0, heroBanners.length - (isDesktop ? 3 : isTablet ? 2 : 1));
 
   const nextSlide = () => {
     setCurrentSlide(prev => (prev >= maxSlide ? 0 : prev + 1));
@@ -306,14 +335,14 @@ export const HeroSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Body: Unified Layout where Cards Slide UNDER the "Shop by" Menu and leave right margin clear */}
+        {/* Hero Body: Unified Viewport where Cards Touch Right Margin by Default & Slide Under Menu to Left Margin */}
         <div 
           className="relative min-h-[560px] overflow-hidden"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
 
-          {/* 1. Left Side: Full Sidebar Menu (8 Categories + New Arrivals + Best Sellers + Brands) */}
+          {/* 1. Left Side: Full Sidebar Menu (8 Categories + New Arrivals + Best Sellers + Brands) with High Z-Index */}
           <div className="hidden lg:block absolute left-0 top-0 w-[270px] min-w-[270px] bg-white rounded-b-md border border-gray-200 shadow-md z-30">
             <nav className="divide-y divide-gray-100">
               
@@ -504,18 +533,22 @@ export const HeroSection: React.FC = () => {
             </nav>
           </div>
 
-          {/* 2. Sliding Track: Starts at offset pl-[286px] and slides UNDER the menu, leaving right space empty */}
-          <div className="w-full lg:pl-[286px] overflow-visible">
+          {/* 2. Sliding Track: Starts at pl-[286px]. Exactly 3 cards fill 100% of available width to the right margin! */}
+          <div 
+            ref={sliderViewportRef} 
+            className="w-full lg:pl-[286px] overflow-visible"
+          >
             <div 
               className="flex transition-transform duration-700 ease-in-out gap-4 z-10"
               style={{
-                transform: `translateX(-${currentSlide * 439}px)`
+                transform: `translateX(-${currentSlide * slideStep}px)`
               }}
             >
               {heroBanners.map((banner) => (
                 <div
                   key={banner.id}
-                  className="w-[423px] min-w-[423px] max-w-[423px] h-[535px] flex-shrink-0"
+                  style={{ width: `${cardWidth}px` }}
+                  className="h-[535px] flex-shrink-0"
                 >
                   <div className={`relative w-full h-full rounded-[20px] overflow-hidden shadow-sm group select-none ${banner.bgColor}`}>
                     
@@ -554,7 +587,7 @@ export const HeroSection: React.FC = () => {
                         </p>
                       )}
 
-                      {/* Animated Roll-Down Button with Requested Alternating Colors */}
+                      {/* Animated Roll-Down Button */}
                       <div className="mt-1">
                         <SlideDownButton
                           to={banner.link}
