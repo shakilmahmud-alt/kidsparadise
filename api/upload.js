@@ -1,6 +1,6 @@
 /**
  * Serverless /api/upload proxy for Vercel
- * Forwards upload payload to cPanel https://kidsparadise.com.bd/api.php server-to-server
+ * Forwards any upload or chunked upload payload to cPanel https://kidsparadise.com.bd/api.php server-to-server
  */
 export const config = {
   api: {
@@ -16,11 +16,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { name, folder, file } = req.body;
-
-    if (!file) {
-      return res.status(400).json({ error: 'No file data provided' });
-    }
+    const payload = req.body || {};
 
     const cpanelRes = await fetch('https://kidsparadise.com.bd/api.php', {
       method: 'POST',
@@ -28,12 +24,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
         'X-API-Secret': 'kidsparadise_jwt_secret_key_2026'
       },
-      body: JSON.stringify({
-        action: 'upload',
-        name: name || 'file.png',
-        folder: folder || 'media',
-        file
-      })
+      body: JSON.stringify(payload)
     });
 
     const data = await cpanelRes.json();

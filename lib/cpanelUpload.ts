@@ -18,8 +18,8 @@ export const uploadToCpanel = async (
     targetFolder = 'videos';
   }
 
-  const CHUNK_SIZE = 1024 * 1024; // 1 MB per chunk (100% safe)
-  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+  const CHUNK_SIZE = 1024 * 1024; // 1 MB per chunk (100% safe for all servers)
+  const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE));
   const fileId = 'up_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
 
   // Helper to read blob to base64
@@ -32,7 +32,6 @@ export const uploadToCpanel = async (
     });
   };
 
-  // If file is small (under 1.5MB), we can do 1 chunk or direct upload
   for (let i = 0; i < totalChunks; i++) {
     const start = i * CHUNK_SIZE;
     const end = Math.min(file.size, start + CHUNK_SIZE);
@@ -65,22 +64,26 @@ export const uploadToCpanel = async (
         responseData = await res.json();
       }
     } catch (err) {
-      console.warn('Direct chunk fetch failed, trying proxy...', err);
+      console.warn(`Direct chunk ${i + 1} fetch failed, trying proxy...`, err);
     }
 
     // 2. Fallback to /api/upload proxy if direct fetch failed
-    if (!responseData) {
-      const proxyRes = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (proxyRes.ok) {
-        responseData = await proxyRes.json();
+    if (!responseData || !responseData.success) {
+      try {
+        const proxyRes = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (proxyRes.ok) {
+          responseData = await proxyRes.json();
+        }
+      } catch (proxyErr) {
+        console.error('Proxy chunk upload failed:', proxyErr);
       }
     }
 
-    if (!responseData || (!responseData.success && !responseData.url)) {
+    if (!responseData || !responseData.success) {
       throw new Error(responseData?.error || `Failed on chunk ${i + 1}/${totalChunks}`);
     }
 
