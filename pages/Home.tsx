@@ -616,11 +616,15 @@ const BrandScroller: React.FC<{ brands: Brand[] }> = ({ brands }) => {
 };
 
 const Home: React.FC = () => {
-  const { products, banners, homeSections, categories, brands, loading } = useStore();
+  const { products, frontendProducts, banners, homeSections, categories, brands, loading } = useStore();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentVideoSlide, setCurrentVideoSlide] = useState(0);
   const [currentAnim, setCurrentAnim] = useState('anim-slide-fade-up');
   const sliderRef = useRef<HTMLDivElement>(null);
+
+  const hotSaleProducts = useMemo(() => {
+    return (frontendProducts || products).filter(p => p.originalPrice && p.originalPrice > p.price);
+  }, [frontendProducts, products]);
 
   const videoSlides = useMemo(() => [
     {
@@ -864,6 +868,21 @@ const Home: React.FC = () => {
       {/* Find your products Category Carousel Slider (Matching Reference Image 4 & 5) */}
       <CategorySlider />
 
+      {/* Today's Hot Sale Section (Before Toys Showcase) */}
+      {hotSaleProducts.length > 0 && (
+        <SliderSection 
+          section={{
+            id: 'hot-sale',
+            title: "Today's Hot Sale",
+            type: 'slider',
+            filterType: 'sale',
+            sortOrder: 1,
+            isActive: true
+          }} 
+          products={hotSaleProducts} 
+        />
+      )}
+
       {/* Toys Showcase Section */}
       <ToysShowcase />
 
@@ -872,10 +891,10 @@ const Home: React.FC = () => {
 
       {/* Additional Dynamic Home Sections */}
       {homeSections
-        .filter(s => s.isActive && s.id !== 'popular-items' && !s.title.toLowerCase().includes('popular') && !s.title.toLowerCase().includes('toys'))
+        .filter(s => s.isActive && s.id !== 'popular-items' && s.id !== 'hot-sale' && !s.title.toLowerCase().includes('popular') && !s.title.toLowerCase().includes('toys') && !s.title.toLowerCase().includes('hot sale'))
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map(section => {
-          let items = products;
+          let items = frontendProducts || products;
           if (section.filterType === 'sale') items = items.filter(p => p.originalPrice && p.originalPrice > p.price);
           else if (section.filterType === 'featured') items = items.filter(p => p.isFeatured);
           else if (section.filterType === 'category' && section.filterValue) {

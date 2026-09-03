@@ -20,7 +20,8 @@ interface GearTab {
 }
 
 export const GearTravelShowcase: React.FC = () => {
-  const { products } = useStore();
+  const { products, frontendProducts } = useStore();
+  const sourceProducts = frontendProducts || products;
   const sliderRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +46,7 @@ export const GearTravelShowcase: React.FC = () => {
   // Filter products for the active gear tab and randomize (max 20)
   const filteredProducts = useMemo(() => {
     // 1. Get all products belonging to Gear & Travel family
-    const allGearProducts = products.filter(p => {
+    const allGearProducts = sourceProducts.filter(p => {
       const cats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
       return cats.some(c => {
         const clean = String(c).replace(/&amp;/g, '&').toLowerCase();

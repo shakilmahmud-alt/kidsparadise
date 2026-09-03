@@ -19,7 +19,8 @@ interface ToyTab {
 }
 
 export const ToysShowcase: React.FC = () => {
-  const { products } = useStore();
+  const { products, frontendProducts } = useStore();
+  const sourceProducts = frontendProducts || products;
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Subcategory tabs for Toys with icons
@@ -44,7 +45,7 @@ export const ToysShowcase: React.FC = () => {
   // Filter products for the active toy tab and randomize
   const filteredProducts = useMemo(() => {
     // 1. Get all products belonging to Toys family
-    const allToyProducts = products.filter(p => {
+    const allToyProducts = sourceProducts.filter(p => {
       const cats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
       return cats.some(c => {
         const clean = String(c).replace(/&amp;/g, '&').toLowerCase();

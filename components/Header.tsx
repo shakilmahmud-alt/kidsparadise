@@ -117,7 +117,7 @@ const MobileCategoryItem: React.FC<{ category: CategoryNode; level: number; onCl
 };
 
 export const Header: React.FC = () => {
-  const { cart, isAdmin, user, signOut, searchQuery, setSearchQuery, openCart, storeInfo, categories, products, userProfile, wishlist, attributes } = useStore();
+  const { cart, isAdmin, user, signOut, searchQuery, setSearchQuery, openCart, storeInfo, categories, products, frontendProducts, userProfile, wishlist, attributes } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -170,10 +170,11 @@ export const Header: React.FC = () => {
 
   const searchResults = useMemo(() => {
     if (!searchQuery || searchQuery.length < 2) return [];
-    return products.filter(p =>
+    const source = frontendProducts || products;
+    return source.filter(p =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase())
     ).slice(0, 5);
-  }, [products, searchQuery]);
+  }, [products, frontendProducts, searchQuery]);
 
   // Sync search query with URL and close menus
   useEffect(() => {

@@ -87,7 +87,8 @@ const ProductCardSkeleton: React.FC = () => {
 
 const CategoryPage: React.FC = () => {
   const { categorySlug } = useParams<{ categorySlug: string }>();
-  const { products, categories, reviews, loading } = useStore();
+  const { products, frontendProducts, categories, reviews, loading } = useStore();
+  const sourceProducts = frontendProducts || products;
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
@@ -205,14 +206,14 @@ const CategoryPage: React.FC = () => {
       })
     );
 
-    return products.filter(p => {
+    return sourceProducts.filter(p => {
       const prodCats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
       return prodCats.some(cat => {
         const cleanCat = String(cat).replace(/&amp;/g, '&').toLowerCase().trim();
         return targetNames.has(cleanCat);
       });
     });
-  }, [products, descendantCategories, currentCategory]);
+  }, [sourceProducts, descendantCategories, currentCategory]);
 
   // Initialize price range based on current category products and URL
   useEffect(() => {

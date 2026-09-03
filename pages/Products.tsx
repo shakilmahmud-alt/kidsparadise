@@ -107,7 +107,8 @@ const ProductCardSkeleton: React.FC = () => {
 
 const Products: React.FC = () => {
   const navigate = useNavigate();
-  const { products, categories, searchQuery, brands, reviews, loading } = useStore();
+  const { products, frontendProducts, categories, searchQuery, brands, reviews, loading } = useStore();
+  const sourceProducts = frontendProducts || products;
   const [searchParams, setSearchParams] = useSearchParams();
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -192,7 +193,7 @@ const Products: React.FC = () => {
 
   // Get all descendant categories for filtering products
   const categoryProducts = useMemo(() => {
-    if (selectedCategory === 'All') return products;
+    if (selectedCategory === 'All') return sourceProducts;
 
     const getDescendantsOnly = (catName: string): string[] => {
       const cleanName = catName.replace(/&amp;/g, '&').toLowerCase().trim();
@@ -222,11 +223,11 @@ const Products: React.FC = () => {
       })
     );
 
-    return products.filter(p => {
+    return sourceProducts.filter(p => {
       const prodCats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
       return prodCats.some(c => targetNames.has(String(c).replace(/&amp;/g, '&').toLowerCase().trim()));
     });
-  }, [products, categories, selectedCategory]);
+  }, [sourceProducts, categories, selectedCategory]);
 
   // Price Range Logic
   const [minMax, setMinMax] = useState<[number, number]>([0, 10000]);

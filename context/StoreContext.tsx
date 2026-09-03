@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useMemo } from 'react';
 import { Product, Category, Order, CartItem, AdminTab, Attribute, Variant, Brand, Coupon, ShippingSettings, Review, UserProfile, Address, StoreInfo, Page, Banner, HomeSection, BlogPost } from '../types';
 import api, { getStoredUser } from '../lib/api';
 
@@ -86,7 +86,21 @@ interface StoreContextType {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   restoreCart: () => boolean;
+  showZeroStockFrontend: boolean;
+  setShowZeroStockFrontend: (val: boolean) => Promise<void>;
+  frontendProducts: Product[];
+  isProductInStock: (p: Product) => boolean;
 }
+
+export const isProductInStock = (p: Product): boolean => {
+  if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
+    return p.variants.some(v => Number(v.stock || 0) > 0);
+  }
+  if (p.stock !== undefined && p.stock !== null) {
+    return Number(p.stock) > 0;
+  }
+  return true;
+};
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
@@ -172,6 +186,25 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showZeroStockFrontend, setShowZeroStockFrontendState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('show_zero_stock_frontend');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const setShowZeroStockFrontend = async (val: boolean) => {
+    setShowZeroStockFrontendState(val);
+    localStorage.setItem('show_zero_stock_frontend', String(val));
+    try {
+      await api.updateSetting('show_zero_stock_frontend', val);
+    } catch (e) {
+      console.warn("Failed to persist show_zero_stock_frontend:", e);
+    }
+  };
+
+  const frontendProducts = useMemo(() => {
+    if (showZeroStockFrontend) return products;
+    return products.filter(p => isProductInStock(p));
+  }, [products, showZeroStockFrontend]);
 
   const fetchData = async () => {
     try {
@@ -192,6 +225,11 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
       if (data.settings?.home_sections && Array.isArray(data.settings.home_sections) && data.settings.home_sections.length > 0) {
         setHomeSections(data.settings.home_sections);
+      }
+      if (data.settings?.show_zero_stock_frontend !== undefined) {
+        const flag = Boolean(data.settings.show_zero_stock_frontend);
+        setShowZeroStockFrontendState(flag);
+        localStorage.setItem('show_zero_stock_frontend', String(flag));
       }
 
       try {
@@ -263,6 +301,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           if (parsed.settings?.store_info) setStoreInfo(parsed.settings.store_info);
           if (parsed.settings?.home_sections && Array.isArray(parsed.settings.home_sections) && parsed.settings.home_sections.length > 0) {
             setHomeSections(parsed.settings.home_sections);
+          }
+          if (parsed.settings?.show_zero_stock_frontend !== undefined) {
+            setShowZeroStockFrontendState(Boolean(parsed.settings.show_zero_stock_frontend));
           }
         }
       } catch (e) {}
@@ -392,6 +433,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   return (
     <StoreContext.Provider value={{
       products, categories, brands, orders, attributes, coupons, reviews, users, addresses, pages, blogPosts, banners, homeSections, wishlist, user, userProfile, shippingSettings, storeInfo, appliedCoupon, cart, isAdmin, adminTab, isCartOpen, loading, restoreCart,
+      showZeroStockFrontend, setShowZeroStockFrontend, frontendProducts, isProductInStock,
       setAdminTab: (tab: AdminTab) => setAdminTab(tab),
       toggleAdmin: () => setIsAdmin(!isAdmin),
       addToCart,

@@ -33,7 +33,8 @@ const Admin: React.FC = () => {
     addPage, updatePage, deletePage,
     banners, addBanner, updateBanner, deleteBanner,
     homeSections, addHomeSection, updateHomeSection, deleteHomeSection,
-    blogPosts, addBlogPost, updateBlogPost, deleteBlogPost
+    blogPosts, addBlogPost, updateBlogPost, deleteBlogPost,
+    showZeroStockFrontend, setShowZeroStockFrontend
   } = useStore();
 
   const { tab } = useParams();
@@ -58,7 +59,6 @@ const Admin: React.FC = () => {
   const [prodFilterSubCat, setProdFilterSubCat] = useState('');
   const [prodFilterStatus, setProdFilterStatus] = useState('all');
   const [prodFilterBrand, setProdFilterBrand] = useState('');
-  const [showZeroStock, setShowZeroStock] = useState(true); // Toggle: ON = show all including zero stock, OFF = only in-stock
   const [prodSortColumn, setProdSortColumn] = useState<'product' | 'price' | null>(null);
   const [prodSortDirection, setProdSortDirection] = useState<'asc' | 'desc'>('asc');
   const [prodPage, setProdPage] = useState(1);
@@ -676,13 +676,6 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
       result = result.filter(p => p.brand === prodFilterBrand);
     }
 
-    // Zero Stock Toggle Filter:
-    // When ON (showZeroStock === true): All products including zero stock are shown
-    // When OFF (showZeroStock === false): Only products with stock > 0 are shown
-    if (!showZeroStock) {
-      result = result.filter(p => isProductInStock(p));
-    }
-
     // Sorting
     if (prodSortColumn) {
       result.sort((a, b) => {
@@ -704,7 +697,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
     }
 
     return result;
-  }, [products, prodSearch, prodFilterCat, prodFilterSubCat, prodFilterStatus, prodFilterBrand, prodSortColumn, prodSortDirection, categories, showZeroStock]);
+  }, [products, prodSearch, prodFilterCat, prodFilterSubCat, prodFilterStatus, prodFilterBrand, prodSortColumn, prodSortDirection, categories]);
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const activePage = Math.max(1, Math.min(prodPage, totalPages || 1));
@@ -1616,7 +1609,6 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
             { id: 'users', icon: UsersIcon, label: 'Users & Roles' },
             { id: 'settings', icon: SettingsIcon, label: 'System' },
             { id: 'reports', icon: BarChart3, label: 'Reports' },
-            { id: 'layout', icon: LayoutTemplate, label: 'Home Layout' },
             { id: 'blog', icon: BookOpen, label: 'Blog' },
           ].map(item => (
             <button key={item.id} onClick={() => { setAdminTabState(item.id); closeForms(); }} className={`flex items-center gap-4 px-6 py-3.5 rounded-2xl transition-all font-bold text-sm ${adminTab === item.id ? 'bg-rose-50 text-[#e92c5d] shadow-lg' : 'text-slate-300 hover:bg-white/10'}`}>
@@ -1628,393 +1620,6 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
 
       <main className="flex-1 p-10">
         {adminTab === 'media' && <MediaManager />}
-
-        {adminTab === 'layout' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
-              <div><h2 className="text-2xl font-black text-slate-800 tracking-tight">Home Layout</h2><p className="text-slate-400 text-sm">Manage homepage sections.</p></div>
-              {!isAdding && !editingItem && (
-                <button onClick={() => setIsAdding('section')} className="bg-[#e92c5d] text-white px-8 py-3.5 rounded-xl font-black uppercase text-[11px] flex items-center gap-2 shadow-xl hover:bg-[#c81d4a] transition-all"><Plus size={18} /> Add Section</button>
-              )}
-            </div>
-
-            {(isAdding === 'section' || editingItem?.type === 'section') ? (
-              <form onSubmit={handleSectionSubmit} className="bg-white rounded-2xl border border-rose-100 p-10 shadow-xl space-y-8">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Section Title</label>
-                    <input required value={sectionForm.title} onChange={e => setSectionForm({ ...sectionForm, title: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Type</label>
-                    <select value={sectionForm.type} onChange={e => setSectionForm({ ...sectionForm, type: e.target.value as any })} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none">
-                      <option value="slider">Slider (1 Row)</option>
-                      <option value="grid">Grid (2 Rows + Banner)</option>
-                      <option value="grid-no-banner">Grid (2 Rows, No Banner)</option>
-                      <option value="banner-full">Full Width Banner</option>
-                      <option value="banner-double">Double Banner (2 Column)</option>
-                      <option value="banner-triple">Triple Banner (3 Column)</option>
-                    </select>
-                  </div>
-                  {sectionForm.type !== 'banner-full' && sectionForm.type !== 'banner-double' && sectionForm.type !== 'banner-triple' && (
-                    <>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Filter Type</label>
-                        <select value={sectionForm.filterType} onChange={e => setSectionForm({ ...sectionForm, filterType: e.target.value as any })} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none">
-                          <option value="all">All Products</option>
-                          <option value="sale">On Sale</option>
-                          <option value="featured">Featured</option>
-                          <option value="category">Specific Category</option>
-                        </select>
-                      </div>
-                      {sectionForm.filterType === 'category' && (
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Category</label>
-                          <select value={sectionForm.filterValue} onChange={e => setSectionForm({ ...sectionForm, filterValue: e.target.value })} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none">
-                            <option value="">Select Category</option>
-                            {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                          </select>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Sort Order</label>
-                    <input type="number" value={sectionForm.sortOrder} onChange={e => setSectionForm({ ...sectionForm, sortOrder: Number(e.target.value) })} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none" />
-                  </div>
-                </div>
-
-                {sectionForm.type === 'grid' && (
-                  <div className="border-t pt-6">
-                    <h3 className="font-bold text-lg mb-4">Grid Banner Settings</h3>
-                    <div className="grid grid-cols-2 gap-6">
-                      <input placeholder="Banner Title" value={sectionForm.banner?.title || ''} onChange={e => setSectionForm({ ...sectionForm, banner: { ...sectionForm.banner!, title: e.target.value } })} className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold" />
-                      <input placeholder="Description" value={sectionForm.banner?.description || ''} onChange={e => setSectionForm({ ...sectionForm, banner: { ...sectionForm.banner!, description: e.target.value } })} className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold" />
-
-                      <div className="col-span-2 space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Banner Image</label>
-                        <div className="flex gap-3 items-center">
-                          {sectionForm.banner?.imageUrl && <img src={sectionForm.banner.imageUrl} className="w-12 h-12 object-cover rounded-lg border border-slate-200" />}
-                          <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 transition-colors h-[46px]">
-                            <Upload size={16} /> Upload
-                            <input type="file" onChange={handleSectionBannerImageUpload} className="hidden" accept="image/*" />
-                          </label>
-                          <input placeholder="Or enter Image URL" value={sectionForm.banner?.imageUrl || ''} onChange={e => setSectionForm({ ...sectionForm, banner: { ...sectionForm.banner!, imageUrl: e.target.value } })} className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none" />
-                        </div>
-                      </div>
-
-                      <input placeholder="Link" value={sectionForm.banner?.link || ''} onChange={e => setSectionForm({ ...sectionForm, banner: { ...sectionForm.banner!, link: e.target.value } })} className="col-span-2 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold" />
-                    </div>
-                  </div>
-                )}
-
-                {sectionForm.type === 'banner-full' && (
-                  <div className="border-t pt-6">
-                    <h3 className="font-bold text-lg mb-4 text-[#e92c5d]">Full Width Banner Settings</h3>
-                    <div className="grid grid-cols-1 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Banner Image</label>
-                        <div className="flex gap-3 items-center">
-                          {sectionForm.banners?.[0]?.imageUrl && (
-                            <img src={sectionForm.banners[0].imageUrl} className="w-24 h-12 object-cover rounded-lg border border-slate-200" />
-                          )}
-                          <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 transition-colors h-[46px]">
-                            <Upload size={16} /> {isUploadingImage ? 'Uploading...' : 'Upload'}
-                            <input type="file" onChange={(e) => handleHomeSectionBannerUpload(e, 0)} className="hidden" accept="image/*" disabled={isUploadingImage} />
-                          </label>
-                          <input
-                            placeholder="Or enter Image URL"
-                            value={sectionForm.banners?.[0]?.imageUrl || ''}
-                            onChange={e => {
-                              const newBanners = [...(sectionForm.banners || [])];
-                              if (!newBanners[0]) newBanners[0] = { imageUrl: '', link: '' };
-                              newBanners[0].imageUrl = e.target.value;
-                              setSectionForm({ ...sectionForm, banners: newBanners });
-                            }}
-                            className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Banner Link (Optional)</label>
-                        <input
-                          placeholder="e.g. /category/fruits or https://..."
-                          value={sectionForm.banners?.[0]?.link || ''}
-                          onChange={e => {
-                            const newBanners = [...(sectionForm.banners || [])];
-                            if (!newBanners[0]) newBanners[0] = { imageUrl: '', link: '' };
-                            newBanners[0].link = e.target.value;
-                            setSectionForm({ ...sectionForm, banners: newBanners });
-                          }}
-                          className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {sectionForm.type === 'banner-double' && (
-                  <div className="border-t pt-6">
-                    <h3 className="font-bold text-lg mb-4 text-[#e92c5d]">Double Banner Settings (2 Column)</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Banner 1 */}
-                      <div className="border border-slate-100 rounded-2xl p-6 bg-slate-50/50 space-y-4">
-                        <h4 className="font-black text-sm text-gray-700">Left / First Banner</h4>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Image</label>
-                          <div className="flex gap-3 items-center">
-                            {sectionForm.banners?.[0]?.imageUrl && (
-                              <img src={sectionForm.banners[0].imageUrl} className="w-16 h-12 object-cover rounded-lg border border-slate-200" />
-                            )}
-                            <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 transition-colors h-[46px]">
-                              <Upload size={16} /> {isUploadingImage ? 'Uploading...' : 'Upload'}
-                              <input type="file" onChange={(e) => handleHomeSectionBannerUpload(e, 0)} className="hidden" accept="image/*" disabled={isUploadingImage} />
-                            </label>
-                            <input
-                              placeholder="Or enter Image URL"
-                              value={sectionForm.banners?.[0]?.imageUrl || ''}
-                              onChange={e => {
-                                const newBanners = [...(sectionForm.banners || [])];
-                                if (!newBanners[0]) newBanners[0] = { imageUrl: '', link: '' };
-                                newBanners[0].imageUrl = e.target.value;
-                                setSectionForm({ ...sectionForm, banners: newBanners });
-                              }}
-                              className="flex-1 bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Link (Optional)</label>
-                          <input
-                            placeholder="e.g. /category/fruits"
-                            value={sectionForm.banners?.[0]?.link || ''}
-                            onChange={e => {
-                              const newBanners = [...(sectionForm.banners || [])];
-                              if (!newBanners[0]) newBanners[0] = { imageUrl: '', link: '' };
-                              newBanners[0].link = e.target.value;
-                              setSectionForm({ ...sectionForm, banners: newBanners });
-                            }}
-                            className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Banner 2 */}
-                      <div className="border border-slate-100 rounded-2xl p-6 bg-slate-50/50 space-y-4">
-                        <h4 className="font-black text-sm text-gray-700">Right / Second Banner</h4>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Image</label>
-                          <div className="flex gap-3 items-center">
-                            {sectionForm.banners?.[1]?.imageUrl && (
-                              <img src={sectionForm.banners[1].imageUrl} className="w-16 h-12 object-cover rounded-lg border border-slate-200" />
-                            )}
-                            <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 transition-colors h-[46px]">
-                              <Upload size={16} /> {isUploadingImage ? 'Uploading...' : 'Upload'}
-                              <input type="file" onChange={(e) => handleHomeSectionBannerUpload(e, 1)} className="hidden" accept="image/*" disabled={isUploadingImage} />
-                            </label>
-                            <input
-                              placeholder="Or enter Image URL"
-                              value={sectionForm.banners?.[1]?.imageUrl || ''}
-                              onChange={e => {
-                                const newBanners = [...(sectionForm.banners || [])];
-                                if (!newBanners[0]) newBanners[0] = { imageUrl: '', link: '' };
-                                if (!newBanners[1]) newBanners[1] = { imageUrl: '', link: '' };
-                                newBanners[1].imageUrl = e.target.value;
-                                setSectionForm({ ...sectionForm, banners: newBanners });
-                              }}
-                              className="flex-1 bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Link (Optional)</label>
-                          <input
-                            placeholder="e.g. /category/vegetables"
-                            value={sectionForm.banners?.[1]?.link || ''}
-                            onChange={e => {
-                              const newBanners = [...(sectionForm.banners || [])];
-                              if (!newBanners[0]) newBanners[0] = { imageUrl: '', link: '' };
-                              if (!newBanners[1]) newBanners[1] = { imageUrl: '', link: '' };
-                              newBanners[1].link = e.target.value;
-                              setSectionForm({ ...sectionForm, banners: newBanners });
-                            }}
-                            className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {sectionForm.type === 'banner-triple' && (
-                  <div className="border-t pt-6">
-                    <h3 className="font-bold text-lg mb-4 text-[#e92c5d]">Triple Banner Settings (3 Column)</h3>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      {/* Banner 1 */}
-                      <div className="border border-slate-100 rounded-2xl p-6 bg-slate-50/50 space-y-4">
-                        <h4 className="font-black text-sm text-gray-700">Left / First Banner</h4>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Image</label>
-                          <div className="flex gap-3 items-center">
-                            {sectionForm.banners?.[0]?.imageUrl && (
-                              <img src={sectionForm.banners[0].imageUrl} className="w-16 h-12 object-cover rounded-lg border border-slate-200" />
-                            )}
-                            <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 transition-colors h-[46px]">
-                              <Upload size={16} /> {isUploadingImage ? 'Uploading...' : 'Upload'}
-                              <input type="file" onChange={(e) => handleHomeSectionBannerUpload(e, 0)} className="hidden" accept="image/*" disabled={isUploadingImage} />
-                            </label>
-                            <input
-                              placeholder="Or enter Image URL"
-                              value={sectionForm.banners?.[0]?.imageUrl || ''}
-                              onChange={e => {
-                                const newBanners = [...(sectionForm.banners || [])];
-                                if (!newBanners[0]) newBanners[0] = { imageUrl: '', link: '' };
-                                newBanners[0].imageUrl = e.target.value;
-                                setSectionForm({ ...sectionForm, banners: newBanners });
-                              }}
-                              className="flex-1 bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Link (Optional)</label>
-                          <input
-                            placeholder="e.g. /category/fruits"
-                            value={sectionForm.banners?.[0]?.link || ''}
-                            onChange={e => {
-                              const newBanners = [...(sectionForm.banners || [])];
-                              if (!newBanners[0]) newBanners[0] = { imageUrl: '', link: '' };
-                              newBanners[0].link = e.target.value;
-                              setSectionForm({ ...sectionForm, banners: newBanners });
-                            }}
-                            className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Banner 2 */}
-                      <div className="border border-slate-100 rounded-2xl p-6 bg-slate-50/50 space-y-4">
-                        <h4 className="font-black text-sm text-gray-700">Middle / Second Banner</h4>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Image</label>
-                          <div className="flex gap-3 items-center">
-                            {sectionForm.banners?.[1]?.imageUrl && (
-                              <img src={sectionForm.banners[1].imageUrl} className="w-16 h-12 object-cover rounded-lg border border-slate-200" />
-                            )}
-                            <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 transition-colors h-[46px]">
-                              <Upload size={16} /> {isUploadingImage ? 'Uploading...' : 'Upload'}
-                              <input type="file" onChange={(e) => handleHomeSectionBannerUpload(e, 1)} className="hidden" accept="image/*" disabled={isUploadingImage} />
-                            </label>
-                            <input
-                              placeholder="Or enter Image URL"
-                              value={sectionForm.banners?.[1]?.imageUrl || ''}
-                              onChange={e => {
-                                const newBanners = [...(sectionForm.banners || [])];
-                                for (let i = 0; i <= 1; i++) {
-                                  if (!newBanners[i]) newBanners[i] = { imageUrl: '', link: '' };
-                                }
-                                newBanners[1].imageUrl = e.target.value;
-                                setSectionForm({ ...sectionForm, banners: newBanners });
-                              }}
-                              className="flex-1 bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Link (Optional)</label>
-                          <input
-                            placeholder="e.g. /category/vegetables"
-                            value={sectionForm.banners?.[1]?.link || ''}
-                            onChange={e => {
-                              const newBanners = [...(sectionForm.banners || [])];
-                              for (let i = 0; i <= 1; i++) {
-                                if (!newBanners[i]) newBanners[i] = { imageUrl: '', link: '' };
-                              }
-                              newBanners[1].link = e.target.value;
-                              setSectionForm({ ...sectionForm, banners: newBanners });
-                            }}
-                            className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Banner 3 */}
-                      <div className="border border-slate-100 rounded-2xl p-6 bg-slate-50/50 space-y-4">
-                        <h4 className="font-black text-sm text-gray-700">Right / Third Banner</h4>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Image</label>
-                          <div className="flex gap-3 items-center">
-                            {sectionForm.banners?.[2]?.imageUrl && (
-                              <img src={sectionForm.banners[2].imageUrl} className="w-16 h-12 object-cover rounded-lg border border-slate-200" />
-                            )}
-                            <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-2 transition-colors h-[46px]">
-                              <Upload size={16} /> {isUploadingImage ? 'Uploading...' : 'Upload'}
-                              <input type="file" onChange={(e) => handleHomeSectionBannerUpload(e, 2)} className="hidden" accept="image/*" disabled={isUploadingImage} />
-                            </label>
-                            <input
-                              placeholder="Or enter Image URL"
-                              value={sectionForm.banners?.[2]?.imageUrl || ''}
-                              onChange={e => {
-                                const newBanners = [...(sectionForm.banners || [])];
-                                for (let i = 0; i <= 2; i++) {
-                                  if (!newBanners[i]) newBanners[i] = { imageUrl: '', link: '' };
-                                }
-                                newBanners[2].imageUrl = e.target.value;
-                                setSectionForm({ ...sectionForm, banners: newBanners });
-                              }}
-                              className="flex-1 bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Link (Optional)</label>
-                          <input
-                            placeholder="e.g. /category/bakery"
-                            value={sectionForm.banners?.[2]?.link || ''}
-                            onChange={e => {
-                              const newBanners = [...(sectionForm.banners || [])];
-                              for (let i = 0; i <= 2; i++) {
-                                if (!newBanners[i]) newBanners[i] = { imageUrl: '', link: '' };
-                              }
-                              newBanners[2].link = e.target.value;
-                              setSectionForm({ ...sectionForm, banners: newBanners });
-                            }}
-                            className="w-full bg-white border border-slate-100 rounded-xl px-4 py-3 font-bold outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
-                  <button type="button" onClick={closeForms} className="px-6 py-3 text-slate-400 font-bold uppercase text-[11px] hover:text-slate-600">Cancel</button>
-                  <button type="submit" className="bg-rose-600 text-white px-10 py-3 rounded-xl font-black uppercase text-[11px] shadow-lg transition-all hover:bg-rose-700">Save Section</button>
-                </div>
-              </form>
-            ) : (
-              <div className="space-y-4">
-                {homeSections.sort((a, b) => a.sortOrder - b.sortOrder).map(section => (
-                  <div key={section.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center group hover:border-rose-200 transition-all">
-                    <div>
-                      <h3 className="font-black text-lg text-gray-800">{section.title}</h3>
-                      <div className="flex gap-2 mt-1">
-                        <span className="px-2 py-0.5 bg-rose-50 text-rose-600 text-[10px] font-black uppercase rounded">{section.type}</span>
-                        {section.type !== 'banner-full' && section.type !== 'banner-double' && section.type !== 'banner-triple' && (
-                          <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded">Filter: {section.filterType}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => startEditSection(section)} className="bg-gray-50 p-2 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-colors"><Pencil size={18} /></button>
-                      <button onClick={() => deleteHomeSection(section.id)} className="bg-gray-50 p-2 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 size={18} /></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {adminTab === 'banners' && (
           <div className="space-y-8 animate-in fade-in duration-500">
@@ -2503,24 +2108,21 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3.5">
-                    {/* Zero Stock Toggle Switch Button */}
+                    {/* Frontend Zero-Stock Visibility Toggle Switch Button */}
                     <div 
-                      onClick={() => {
-                        setShowZeroStock(prev => !prev);
-                        setProdPage(1);
-                      }}
+                      onClick={() => setShowZeroStockFrontend(!showZeroStockFrontend)}
                       className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-2xl border border-gray-200 shadow-xs cursor-pointer hover:border-gray-300 hover:shadow-md transition-all select-none group"
-                      title={showZeroStock ? 'Click to hide zero stock products' : 'Click to show all products including zero stock'}
+                      title={showZeroStockFrontend ? 'Currently showing all products (including zero stock) on customer frontend. Click to hide.' : 'Currently showing in-stock only on customer frontend. Click to show all.'}
                     >
                       <div className="flex flex-col text-left">
                         <div className="flex items-center gap-1.5">
-                          <span className={`w-2 h-2 rounded-full ${showZeroStock ? 'bg-[#e92c5d] animate-pulse' : 'bg-emerald-500'}`}></span>
+                          <span className={`w-2 h-2 rounded-full ${showZeroStockFrontend ? 'bg-[#e92c5d] animate-pulse' : 'bg-slate-400'}`}></span>
                           <span className="text-xs font-bold text-slate-800 leading-tight">
-                            {showZeroStock ? 'All Products' : 'In-Stock Only'}
+                            Frontend Stock Visibility
                           </span>
                         </div>
                         <span className="text-[10px] text-slate-400 font-medium ml-3.5">
-                          {showZeroStock ? 'Including zero stock' : 'Hiding zero stock'}
+                          {showZeroStockFrontend ? 'All Products on Frontend' : 'In-Stock Only on Frontend'}
                         </span>
                       </div>
 
@@ -2528,14 +2130,14 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                       <button
                         type="button"
                         role="switch"
-                        aria-checked={showZeroStock}
+                        aria-checked={showZeroStockFrontend}
                         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          showZeroStock ? 'bg-[#e92c5d]' : 'bg-slate-300'
+                          showZeroStockFrontend ? 'bg-[#e92c5d]' : 'bg-slate-300'
                         }`}
                       >
                         <span
                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                            showZeroStock ? 'translate-x-5' : 'translate-x-0'
+                            showZeroStockFrontend ? 'translate-x-5' : 'translate-x-0'
                           }`}
                         />
                       </button>
@@ -2626,15 +2228,10 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                   </div>
 
                   {/* Summary & Clear Filters */}
-                  {(prodSearch || prodFilterCat || prodFilterSubCat || prodFilterStatus !== 'all' || prodFilterBrand || !showZeroStock) && (
+                  {(prodSearch || prodFilterCat || prodFilterSubCat || prodFilterStatus !== 'all' || prodFilterBrand) && (
                     <div className="flex justify-between items-center text-xs font-bold text-slate-400 pt-2 px-1">
-                      <div className="flex items-center gap-2">
-                        <span>Found <span className="text-[#e92c5d]">{filteredProducts.length}</span> matching products</span>
-                        {!showZeroStock && (
-                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-black">
-                            In-Stock Filter Active
-                          </span>
-                        )}
+                      <div>
+                        Found <span className="text-[#e92c5d]">{filteredProducts.length}</span> matching products
                       </div>
                       <button
                         onClick={() => {
@@ -2643,7 +2240,6 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                           setProdFilterSubCat('');
                           setProdFilterStatus('all');
                           setProdFilterBrand('');
-                          setShowZeroStock(true);
                         }}
                         className="text-rose-600 hover:text-rose-800 transition-colors uppercase tracking-wider text-[10px] flex items-center gap-1 font-black cursor-pointer"
                       >
