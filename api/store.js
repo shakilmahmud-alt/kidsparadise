@@ -62,12 +62,26 @@ export default async function handler(req, res) {
           }
         });
         const finalCats = Array.from(new Set([...cats, ...extraCats]));
+        const variants = safeJson(p.variants, []);
+        let price = Number(p.price || 0);
+        let originalPrice = p.original_price ? Number(p.original_price) : undefined;
+        if ((!price || price === 0) && variants && variants.length > 0) {
+          const varPrices = variants.map(v => Number(v.price) || 0).filter(pr => pr > 0);
+          if (varPrices.length > 0) {
+            price = Math.min(...varPrices);
+          }
+          const varOrigPrices = variants.map(v => Number(v.originalPrice || v.original_price) || 0).filter(pr => pr > 0);
+          if (varOrigPrices.length > 0 && (!originalPrice || originalPrice === 0)) {
+            originalPrice = Math.min(...varOrigPrices);
+          }
+        }
+
         return {
           id: String(p.id),
           name: p.name,
           slug: p.slug,
-          price: Number(p.price),
-          originalPrice: p.original_price ? Number(p.original_price) : undefined,
+          price: price,
+          originalPrice: originalPrice,
           category: finalCats,
           brand: p.brand || undefined,
           unit: p.unit || undefined,
@@ -77,7 +91,7 @@ export default async function handler(req, res) {
           description: p.description || '',
           badge: p.badge || undefined,
           isFeatured: Boolean(p.is_featured),
-          variants: safeJson(p.variants, []),
+          variants: variants,
           filterAttributes: safeJson(p.filter_attributes, [])
         };
       });
@@ -253,6 +267,12 @@ export default async function handler(req, res) {
     if (path.startsWith('/api/products') || path.includes('/products')) {
       if (method === 'POST') {
         const p = req.body;
+        const variants = Array.isArray(p.variants) ? p.variants : (typeof p.variants === 'string' ? safeJson(p.variants, []) : []);
+        let price = Number(p.price || 0);
+        if ((!price || price === 0) && variants.length > 0) {
+          const varPrices = variants.map(v => Number(v.price) || 0).filter(pr => pr > 0);
+          if (varPrices.length > 0) price = Math.min(...varPrices);
+        }
         const result = await query(
           `INSERT INTO products (
             name, slug, price, original_price, category, brand, unit, sku,
@@ -261,13 +281,13 @@ export default async function handler(req, res) {
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             p.name, p.slug || p.name.toLowerCase().replace(/\s+/g, '-'),
-            p.price || 0, p.originalPrice || null,
+            price, p.originalPrice || null,
             Array.isArray(p.category) ? p.category.join(', ') : (p.category || ''),
             p.brand || null, p.unit || null, p.sku || null,
             JSON.stringify(p.images || []), p.images?.[0] || null,
             p.shortDescription || null, p.description || '',
             p.badge || null, p.isFeatured ? 1 : 0,
-            JSON.stringify(p.variants || []), JSON.stringify(p.filterAttributes || [])
+            JSON.stringify(variants), JSON.stringify(p.filterAttributes || [])
           ]
         );
         return res.status(201).json({ id: result.insertId });
@@ -276,6 +296,12 @@ export default async function handler(req, res) {
       if (method === 'PUT') {
         const id = req.params?.id || path.split('/').pop();
         const p = req.body;
+        const variants = Array.isArray(p.variants) ? p.variants : (typeof p.variants === 'string' ? safeJson(p.variants, []) : []);
+        let price = Number(p.price || 0);
+        if ((!price || price === 0) && variants.length > 0) {
+          const varPrices = variants.map(v => Number(v.price) || 0).filter(pr => pr > 0);
+          if (varPrices.length > 0) price = Math.min(...varPrices);
+        }
         await query(
           `UPDATE products SET
             name = ?, slug = ?, price = ?, original_price = ?, category = ?,
@@ -285,7 +311,7 @@ export default async function handler(req, res) {
           WHERE id = ?`,
           [
             p.name, p.slug || p.name.toLowerCase().replace(/\s+/g, '-'),
-            p.price || 0, p.originalPrice || null,
+            price, p.originalPrice || null,
             Array.isArray(p.category) ? p.category.join(', ') : (p.category || ''),
             p.brand || null, p.unit || null, p.sku || null,
             JSON.stringify(p.images || []), p.images?.[0] || null,

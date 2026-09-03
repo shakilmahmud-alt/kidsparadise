@@ -92,6 +92,30 @@ interface StoreContextType {
   isProductInStock: (p: Product) => boolean;
 }
 
+export const normalizeProduct = (p: Product): Product => {
+  let price = Number(p.price) || 0;
+  let originalPrice = p.originalPrice !== undefined ? Number(p.originalPrice) : ((p as any).original_price !== undefined ? Number((p as any).original_price) : undefined);
+  const variants = Array.isArray(p.variants) ? p.variants : [];
+
+  if ((!price || price === 0) && variants.length > 0) {
+    const validVarPrices = variants.map(v => Number(v.price) || 0).filter(pr => pr > 0);
+    if (validVarPrices.length > 0) {
+      price = Math.min(...validVarPrices);
+    }
+    const validVarOrigPrices = variants.map(v => Number(v.originalPrice || (v as any).original_price) || 0).filter(pr => pr > 0);
+    if (validVarOrigPrices.length > 0 && (!originalPrice || originalPrice === 0)) {
+      originalPrice = Math.min(...validVarOrigPrices);
+    }
+  }
+
+  return {
+    ...p,
+    price,
+    originalPrice: originalPrice && originalPrice > 0 ? originalPrice : undefined,
+    variants
+  };
+};
+
 export const isProductInStock = (p: Product): boolean => {
   if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
     return p.variants.some(v => Number(v.stock || 0) > 0);
@@ -102,14 +126,45 @@ export const isProductInStock = (p: Product): boolean => {
   return true;
 };
 
+const getInitialStoreCache = () => {
+  try {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('kp_cached_store');
+      if (cached) return JSON.parse(cached);
+    }
+  } catch (e) {}
+  return null;
+};
+
+const initialStoreCache = getInitialStoreCache();
+
+const DEFAULT_CATEGORIES: Category[] = [
+  { id: '1', name: 'Apparels', slug: 'apparels', image: '', itemCount: 0 },
+  { id: '2', name: 'Toys', slug: 'toys', image: '', itemCount: 0 },
+  { id: '3', name: 'Gear & Travel', slug: 'gear-travel', image: '', itemCount: 0 },
+  { id: '4', name: 'Care & Hygiene', slug: 'care-hygiene', image: '', itemCount: 0 },
+  { id: '5', name: 'Furniture & Bedding', slug: 'furniture-bedding', image: '', itemCount: 0 },
+  { id: '6', name: 'Stationery', slug: 'stationery', image: '', itemCount: 0 },
+  { id: '7', name: 'Mother Care', slug: 'mother-care', image: '', itemCount: 0 },
+  { id: '8', name: 'Others', slug: 'others', image: '', itemCount: 0 },
+];
+
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => {
+    if (initialStoreCache?.products?.length) {
+      return initialStoreCache.products.map(normalizeProduct);
+    }
+    return [];
+  });
+  const [categories, setCategories] = useState<Category[]>(() => {
+    if (initialStoreCache?.categories?.length) return initialStoreCache.categories;
+    return DEFAULT_CATEGORIES;
+  });
+  const [brands, setBrands] = useState<Brand[]>(() => initialStoreCache?.brands || []);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [attributes, setAttributes] = useState<Attribute[]>(() => initialStoreCache?.attributes || []);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -209,7 +264,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const fetchData = async () => {
     try {
       const data = await api.getStoreData();
-      if (data.products) setProducts(data.products);
+      if (data.products) {
+        const normalized = data.products.map(normalizeProduct);
+        setProducts(normalized);
+      }
       if (data.categories) setCategories(data.categories);
       if (data.brands) setBrands(data.brands);
       if (data.coupons) setCoupons(data.coupons);
@@ -234,7 +292,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
       try {
         localStorage.setItem('kp_cached_store', JSON.stringify({
-          products: data.products,
+          products: data.products ? data.products.map(normalizeProduct) : [],
           categories: data.categories,
           brands: data.brands,
           attributes: data.attributes,
@@ -291,7 +349,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed.products?.length) {
-            setProducts(parsed.products);
+            setProducts(parsed.products.map(normalizeProduct));
             hasCache = true;
           }
           if (parsed.categories?.length) setCategories(parsed.categories);

@@ -59,7 +59,7 @@ const Admin: React.FC = () => {
   const [prodFilterSubCat, setProdFilterSubCat] = useState('');
   const [prodFilterStatus, setProdFilterStatus] = useState('all');
   const [prodFilterBrand, setProdFilterBrand] = useState('');
-  const [prodSortColumn, setProdSortColumn] = useState<'product' | 'price' | null>(null);
+  const [prodSortColumn, setProdSortColumn] = useState<'product' | 'price' | 'stock' | null>(null);
   const [prodSortDirection, setProdSortDirection] = useState<'asc' | 'desc'>('asc');
   const [prodPage, setProdPage] = useState(1);
   const itemsPerPage = 30;
@@ -688,6 +688,9 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
         } else if (prodSortColumn === 'price') {
           valA = a.price;
           valB = b.price;
+        } else if (prodSortColumn === 'stock') {
+          valA = a.variants && a.variants.length > 0 ? a.variants.reduce((s, v) => s + (Number(v.stock) || 0), 0) : (Number(a.stock) || 0);
+          valB = b.variants && b.variants.length > 0 ? b.variants.reduce((s, v) => s + (Number(v.stock) || 0), 0) : (Number(b.stock) || 0);
         }
 
         if (valA < valB) return prodSortDirection === 'asc' ? -1 : 1;
@@ -713,11 +716,181 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
 
   // Pricing Logic Helper
   const getProductDisplayPrice = (p: Product) => {
-    const hasSale = p.originalPrice !== undefined && p.originalPrice > p.price;
+    let price = Number(p.price) || 0;
+    let originalPrice = p.originalPrice;
+    if ((!price || price === 0) && p.variants && p.variants.length > 0) {
+      const validPrices = p.variants.map(v => Number(v.price) || 0).filter(pr => pr > 0);
+      if (validPrices.length > 0) price = Math.min(...validPrices);
+      const validOrig = p.variants.map(v => Number(v.originalPrice) || 0).filter(pr => pr > 0);
+      if (validOrig.length > 0 && !originalPrice) originalPrice = Math.min(...validOrig);
+    }
+    const hasSale = originalPrice !== undefined && originalPrice > price;
     return {
-      mrp: hasSale ? p.originalPrice : p.price,
-      sale: hasSale ? p.price : null
+      mrp: hasSale ? originalPrice : price,
+      sale: hasSale ? price : null
     };
+  };
+
+  // Inline Editing State for Products Table
+  interface InlineProductEdit {
+    price: number;
+    originalPrice?: number;
+    stock: number;
+    variants?: Variant[];
+  }
+
+  const [inlineEdits, setInlineEdits] = useState<Record<string, InlineProductEdit>>({});
+  const [inlineSaving, setInlineSaving] = useState<Record<string, boolean>>({});
+  const [inlineSaved, setInlineSaved] = useState<Record<string, boolean>>({});
+
+  const getInlineValues = (p: Product): InlineProductEdit => {
+    if (inlineEdits[p.id]) {
+      return inlineEdits[p.id];
+    }
+    const hasVariants = p.variants && Array.isArray(p.variants) && p.variants.length > 0;
+    let initialPrice = Number(p.price) || 0;
+    if (hasVariants && initialPrice === 0) {
+      const prices = p.variants!.map(v => Number(v.price) || 0).filter(pr => pr > 0);
+      if (prices.length > 0) initialPrice = Math.min(...prices);
+    }
+    let initialStock = 0;
+    if (hasVariants) {
+      initialStock = p.variants!.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+    } else {
+      initialStock = p.stock !== undefined && p.stock !== null ? Number(p.stock) : 0;
+    }
+    return {
+      price: initialPrice,
+      originalPrice: p.originalPrice,
+      stock: initialStock,
+      variants: hasVariants ? p.variants!.map(v => ({ ...v, price: Number(v.price) || 0, stock: Number(v.stock) || 0 })) : undefined
+    };
+  };
+
+  const handleInlinePriceChange = (productId: string, price: number) => {
+    const p = products.find(prod => prod.id === productId);
+    if (!p) return;
+    const current = getInlineValues(p);
+    setInlineEdits(prev => ({
+      ...prev,
+      [productId]: { ...current, price }
+    }));
+  };
+
+  const handleInlineOriginalPriceChange = (productId: string, originalPrice?: number) => {
+    const p = products.find(prod => prod.id === productId);
+    if (!p) return;
+    const current = getInlineValues(p);
+    setInlineEdits(prev => ({
+      ...prev,
+      [productId]: { ...current, originalPrice }
+    }));
+  };
+
+  const handleInlineStockChange = (productId: string, stock: number) => {
+    const p = products.find(prod => prod.id === productId);
+    if (!p) return;
+    const current = getInlineValues(p);
+    setInlineEdits(prev => ({
+      ...prev,
+      [productId]: { ...current, stock }
+    }));
+  };
+
+  const handleVariantPriceChange = (productId: string, variantIndex: number, price: number) => {
+    const p = products.find(prod => prod.id === productId);
+    if (!p) return;
+    const current = getInlineValues(p);
+    const updatedVariants = [...(current.variants || [])];
+    if (updatedVariants[variantIndex]) {
+      updatedVariants[variantIndex] = { ...updatedVariants[variantIndex], price };
+    }
+    const validPrices = updatedVariants.map(v => Number(v.price) || 0).filter(pr => pr > 0);
+    const minPrice = validPrices.length > 0 ? Math.min(...validPrices) : price;
+    setInlineEdits(prev => ({
+      ...prev,
+      [productId]: {
+        ...current,
+        price: minPrice,
+        variants: updatedVariants
+      }
+    }));
+  };
+
+  const handleVariantStockChange = (productId: string, variantIndex: number, stock: number) => {
+    const p = products.find(prod => prod.id === productId);
+    if (!p) return;
+    const current = getInlineValues(p);
+    const updatedVariants = [...(current.variants || [])];
+    if (updatedVariants[variantIndex]) {
+      updatedVariants[variantIndex] = { ...updatedVariants[variantIndex], stock };
+    }
+    const totalStock = updatedVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+    setInlineEdits(prev => ({
+      ...prev,
+      [productId]: {
+        ...current,
+        stock: totalStock,
+        variants: updatedVariants
+      }
+    }));
+  };
+
+  const saveInlineProduct = async (productId: string) => {
+    const p = products.find(prod => prod.id === productId);
+    if (!p) return;
+    const edited = getInlineValues(p);
+    setInlineSaving(prev => ({ ...prev, [productId]: true }));
+    try {
+      const hasVariants = edited.variants && edited.variants.length > 0;
+      let updatePayload: any = {
+        ...p,
+        price: edited.price,
+        originalPrice: edited.originalPrice ? Number(edited.originalPrice) : null
+      };
+
+      if (hasVariants) {
+        updatePayload.variants = edited.variants;
+        const validPrices = edited.variants!.map(v => Number(v.price) || 0).filter(pr => pr > 0);
+        if (validPrices.length > 0) {
+          updatePayload.price = Math.min(...validPrices);
+        }
+      } else {
+        updatePayload.stock = edited.stock;
+        if (p.variants && p.variants.length === 1) {
+          updatePayload.variants = [{
+            ...p.variants[0],
+            price: edited.price,
+            originalPrice: edited.originalPrice,
+            stock: edited.stock
+          }];
+        }
+      }
+
+      await updateProduct(productId, updatePayload);
+
+      setInlineEdits(prev => {
+        const copy = { ...prev };
+        delete copy[productId];
+        return copy;
+      });
+
+      setInlineSaved(prev => ({ ...prev, [productId]: true }));
+      setTimeout(() => {
+        setInlineSaved(prev => ({ ...prev, [productId]: false }));
+      }, 2500);
+    } catch (err: any) {
+      alert("Failed to save product: " + (err.message || err));
+    } finally {
+      setInlineSaving(prev => ({ ...prev, [productId]: false }));
+    }
+  };
+
+  const getVariantLabel = (variant: Variant, index: number) => {
+    if (variant.attributeValues && Object.keys(variant.attributeValues).length > 0) {
+      return Object.values(variant.attributeValues).join(' / ');
+    }
+    return variant.sku || `Variant ${index + 1}`;
   };
 
   const handleAddOption = (e?: React.FormEvent) => {
@@ -2294,16 +2467,43 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                             )}
                           </div>
                         </th>
+                        <th 
+                          onClick={() => {
+                            if (prodSortColumn === 'stock') {
+                              setProdSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setProdSortColumn('stock');
+                              setProdSortDirection('asc');
+                            }
+                          }}
+                          className="px-6 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors select-none"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span>Stock Qty</span>
+                            {prodSortColumn === 'stock' ? (
+                              prodSortDirection === 'asc' ? <ArrowUp size={12} className="text-[#e92c5d]" /> : <ArrowDown size={12} className="text-[#e92c5d]" />
+                            ) : (
+                              <ArrowUpDown size={12} className="opacity-40" />
+                            )}
+                          </div>
+                        </th>
                         <th className="px-8 py-6 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {paginatedProducts.map(p => {
-                        const { mrp, sale } = getProductDisplayPrice(p);
-                        const inStock = isProductInStock(p);
+                        const editedVals = getInlineValues(p);
+                        const hasVariants = editedVals.variants && editedVals.variants.length > 0;
+                        const inStock = hasVariants
+                          ? editedVals.variants!.some(v => Number(v.stock || 0) > 0)
+                          : editedVals.stock > 0;
+                        const isModified = Boolean(inlineEdits[p.id]);
+                        const isSaving = Boolean(inlineSaving[p.id]);
+                        const isSaved = Boolean(inlineSaved[p.id]);
+
                         return (
                           <tr key={p.id} className="hover:bg-slate-50/50 group transition-colors">
-                            <td className="px-8 py-5 flex items-center gap-4">
+                            <td className="px-8 py-5 align-top flex items-center gap-4">
                               <div className="w-12 h-12 bg-slate-50 rounded-xl p-1 border border-slate-100 flex items-center justify-center shrink-0">
                                 {(!p.images?.[0] || brokenImages[p.id]) ? <ImageIcon className="text-slate-200" size={20} /> : <img src={p.images[0]} className="max-h-full max-w-full object-contain" onError={() => handleImageError(p.id)} />}
                               </div>
@@ -2317,16 +2517,142 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-5 text-slate-400 font-medium text-sm">{Array.isArray(p.category) ? p.category.join(', ') : p.category}</td>
-                            <td className="px-6 py-5">
-                              <div className="flex flex-col">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">MRP: {mrp?.toFixed(2)}</span>
-                                {sale && <span className="text-sm font-black text-[#e92c5d]">Sale: {sale.toFixed(2)}</span>}
-                              </div>
+                            <td className="px-6 py-5 align-top text-slate-400 font-medium text-sm">
+                              {Array.isArray(p.category) ? p.category.join(', ') : p.category}
                             </td>
-                            <td className="px-8 py-5 text-right flex justify-end gap-2">
-                              <button onClick={() => startEditProduct(p)} className="bg-white p-2.5 rounded-xl border border-slate-100 text-slate-300 hover:text-blue-500 shadow-sm"><Pencil size={18} /></button>
-                              <button onClick={() => deleteProduct(p.id)} className="bg-white p-2.5 rounded-xl border border-slate-100 text-slate-300 hover:text-red-500 shadow-sm"><Trash2 size={18} /></button>
+                            <td className="px-6 py-5 align-top">
+                              {hasVariants ? (
+                                <div className="flex flex-col gap-2 py-0.5">
+                                  {editedVals.variants!.map((v, vIdx) => {
+                                    const vLabel = getVariantLabel(v, vIdx);
+                                    return (
+                                      <div key={v.id || vIdx} className="flex items-center gap-2">
+                                        <span 
+                                          className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md shrink-0 truncate max-w-[120px] border border-slate-200/60"
+                                          title={vLabel}
+                                        >
+                                          {vLabel}
+                                        </span>
+                                        <div className="relative w-24">
+                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">৳</span>
+                                          <input
+                                            type="number"
+                                            value={v.price}
+                                            onChange={(e) => handleVariantPriceChange(p.id, vIdx, Number(e.target.value))}
+                                            className="w-full pl-5 pr-1.5 py-1 bg-slate-50 hover:bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-800 focus:bg-white focus:border-[#e92c5d] focus:ring-1 focus:ring-[#e92c5d] outline-none transition-all"
+                                            placeholder="Price"
+                                          />
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-1.5 w-28 py-0.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] font-black uppercase text-slate-400 w-7">Sale:</span>
+                                    <div className="relative flex-1">
+                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">৳</span>
+                                      <input
+                                        type="number"
+                                        value={editedVals.price}
+                                        onChange={(e) => handleInlinePriceChange(p.id, Number(e.target.value))}
+                                        className="w-full pl-5 pr-1.5 py-1 bg-slate-50 hover:bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-800 focus:bg-white focus:border-[#e92c5d] focus:ring-1 focus:ring-[#e92c5d] outline-none transition-all"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] font-black uppercase text-slate-400 w-7">MRP:</span>
+                                    <div className="relative flex-1">
+                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">৳</span>
+                                      <input
+                                        type="number"
+                                        placeholder="Optional"
+                                        value={editedVals.originalPrice ?? ''}
+                                        onChange={(e) => handleInlineOriginalPriceChange(p.id, e.target.value ? Number(e.target.value) : undefined)}
+                                        className="w-full pl-5 pr-1.5 py-0.5 bg-transparent border-b border-dashed border-slate-200 text-[10px] font-semibold text-slate-500 focus:border-[#e92c5d] outline-none transition-all"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-5 align-top">
+                              {hasVariants ? (
+                                <div className="flex flex-col gap-2 py-0.5">
+                                  {editedVals.variants!.map((v, vIdx) => {
+                                    const vLabel = getVariantLabel(v, vIdx);
+                                    const vStock = Number(v.stock || 0);
+                                    return (
+                                      <div key={v.id || vIdx} className="flex items-center gap-2">
+                                        <span 
+                                          className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md shrink-0 truncate max-w-[120px] border border-slate-200/60"
+                                          title={vLabel}
+                                        >
+                                          {vLabel}
+                                        </span>
+                                        <div className="flex items-center gap-1.5">
+                                          <input
+                                            type="number"
+                                            value={vStock}
+                                            onChange={(e) => handleVariantStockChange(p.id, vIdx, Number(e.target.value))}
+                                            className="w-16 px-2 py-1 bg-slate-50 hover:bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-800 focus:bg-white focus:border-[#e92c5d] focus:ring-1 focus:ring-[#e92c5d] outline-none transition-all"
+                                            placeholder="Stock"
+                                          />
+                                          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${vStock > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
+                                            {vStock > 0 ? 'In' : '0'}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                  <div className="text-[10px] font-black text-slate-400 pt-0.5">
+                                    Total: <span className="text-slate-700 font-extrabold">{editedVals.variants!.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)}</span> pcs
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 py-0.5">
+                                  <input
+                                    type="number"
+                                    value={editedVals.stock}
+                                    onChange={(e) => handleInlineStockChange(p.id, Number(e.target.value))}
+                                    className="w-20 px-2.5 py-1.5 bg-slate-50 hover:bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-800 focus:bg-white focus:border-[#e92c5d] focus:ring-1 focus:ring-[#e92c5d] outline-none transition-all"
+                                  />
+                                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${editedVals.stock > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
+                                    {editedVals.stock > 0 ? 'In Stock' : 'Out'}
+                                  </span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-8 py-5 text-right align-top">
+                              <div className="flex items-center justify-end gap-2">
+                                {isSaved ? (
+                                  <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm animate-in fade-in">
+                                    <Check size={14} /> Saved!
+                                  </span>
+                                ) : isModified ? (
+                                  <button
+                                    onClick={() => saveInlineProduct(p.id)}
+                                    disabled={isSaving}
+                                    className="bg-[#e92c5d] hover:bg-[#c81d4a] text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-rose-200 transition-all active:scale-95 disabled:opacity-50"
+                                    title="Save inline changes"
+                                  >
+                                    {isSaving ? (
+                                      <>
+                                        <RefreshCw size={13} className="animate-spin" />
+                                        <span>Saving...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Save size={13} />
+                                        <span>Save</span>
+                                      </>
+                                    )}
+                                  </button>
+                                ) : null}
+                                <button onClick={() => startEditProduct(p)} className="bg-white p-2.5 rounded-xl border border-slate-100 text-slate-400 hover:text-blue-500 shadow-sm hover:border-blue-200 transition-colors" title="Full Product Edit"><Pencil size={18} /></button>
+                                <button onClick={() => deleteProduct(p.id)} className="bg-white p-2.5 rounded-xl border border-slate-100 text-slate-400 hover:text-red-500 shadow-sm hover:border-red-200 transition-colors" title="Delete Product"><Trash2 size={18} /></button>
+                              </div>
                             </td>
                           </tr>
                         );
