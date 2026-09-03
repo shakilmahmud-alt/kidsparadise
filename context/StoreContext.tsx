@@ -118,7 +118,7 @@ export const normalizeProduct = (p: Product): Product => {
 
 export const isProductInStock = (p: Product): boolean => {
   if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
-    return p.variants.some(v => Number(v.stock || 0) > 0);
+    return p.variants.some(v => v.stock === undefined || v.stock === null || Number(v.stock) > 0);
   }
   if (p.stock !== undefined && p.stock !== null) {
     return Number(p.stock) > 0;

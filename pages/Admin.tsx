@@ -591,7 +591,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
   // Helper to determine product stock status
   const isProductInStock = (p: Product) => {
     if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
-      return p.variants.some(v => Number(v.stock || 0) > 0);
+      return p.variants.some(v => v.stock === undefined || v.stock === null || Number(v.stock) > 0);
     }
     if (p.stock !== undefined && p.stock !== null) {
       return Number(p.stock) > 0;
@@ -753,17 +753,21 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
       const prices = p.variants!.map(v => Number(v.price) || 0).filter(pr => pr > 0);
       if (prices.length > 0) initialPrice = Math.min(...prices);
     }
-    let initialStock = 0;
+    let initialStock = 100;
     if (hasVariants) {
-      initialStock = p.variants!.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+      initialStock = p.variants!.reduce((sum, v) => sum + (v.stock !== undefined && v.stock !== null ? Number(v.stock) : 100), 0);
     } else {
-      initialStock = p.stock !== undefined && p.stock !== null ? Number(p.stock) : 0;
+      initialStock = p.stock !== undefined && p.stock !== null ? Number(p.stock) : 100;
     }
     return {
       price: initialPrice,
       originalPrice: p.originalPrice,
       stock: initialStock,
-      variants: hasVariants ? p.variants!.map(v => ({ ...v, price: Number(v.price) || 0, stock: Number(v.stock) || 0 })) : undefined
+      variants: hasVariants ? p.variants!.map(v => ({
+        ...v,
+        price: Number(v.price) || 0,
+        stock: v.stock !== undefined && v.stock !== null ? Number(v.stock) : 100
+      })) : undefined
     };
   };
 
@@ -2495,8 +2499,8 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                         const editedVals = getInlineValues(p);
                         const hasVariants = editedVals.variants && editedVals.variants.length > 0;
                         const inStock = hasVariants
-                          ? editedVals.variants!.some(v => Number(v.stock || 0) > 0)
-                          : editedVals.stock > 0;
+                          ? editedVals.variants!.some(v => v.stock === undefined || v.stock === null || Number(v.stock) > 0)
+                          : Number(editedVals.stock) > 0;
                         const isModified = Boolean(inlineEdits[p.id]);
                         const isSaving = Boolean(inlineSaving[p.id]);
                         const isSaved = Boolean(inlineSaved[p.id]);
