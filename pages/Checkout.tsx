@@ -5,7 +5,7 @@ import { Truck, ChevronDown, Loader2, CreditCard, Ticket, AlertCircle, ShieldChe
 import { DISTRICT_AREA_DATA } from '../constants';
 
 const Checkout: React.FC = () => {
-  const { cart, appliedCoupon, placeOrder, shippingSettings, user, userProfile, addresses, restoreCart } = useStore();
+  const { cart, appliedCoupon, placeOrder, shippingSettings, user, userProfile, addresses, restoreCart, clearCart } = useStore();
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
@@ -70,11 +70,23 @@ const Checkout: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
+
+    if (cart.length === 0) {
+      alert("Your cart is empty. Please add products to cart before checkout.");
+      return;
+    }
+
+    // Capture the exact full order total (subtotal + shipping - discount) BEFORE any async action
+    const calculatedPayableTotal = Math.max(1, Math.round(total));
     
     setIsSubmitting(true);
     setCheckoutError(null);
     if (paymentMethod === 'online') {
       setIsRedirectingPayment(true);
+      setRedirectOrderInfo({
+        id: '',
+        amount: calculatedPayableTotal
+      });
     }
 
     try {
@@ -84,19 +96,22 @@ const Checkout: React.FC = () => {
         paymentMethod: paymentMethod === 'online' ? 'Online Payment (Card/MFS)' : 'Cash on Delivery'
       });
       console.log("Order placed successfully:", order);
+
+      // Get exact final amount from created order or fallback to calculatedPayableTotal
+      const finalPayableAmount = Math.max(1, Math.round(Number(order.total) || calculatedPayableTotal));
       
       if (paymentMethod === 'online') {
         setRedirectOrderInfo({
           id: order.id,
-          amount: total
+          amount: finalPayableAmount
         });
-        console.log("Initiating online payment for total:", total);
+        console.log("Initiating online payment for total amount:", finalPayableAmount);
         try {
           const response = await fetch('/api/payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              amount: total,
+              amount: finalPayableAmount,
               transactionId: order.id,
               customerName: formData.fullName,
               customerEmail: formData.email,
@@ -108,6 +123,8 @@ const Checkout: React.FC = () => {
           console.log("Payment API Response:", data);
           if (data.gatewayUrl) {
             console.log("Redirecting to:", data.gatewayUrl);
+            clearCart();
+            localStorage.removeItem('cart');
             window.location.href = data.gatewayUrl;
             return;
           } else {
@@ -192,7 +209,7 @@ const Checkout: React.FC = () => {
             )}
             <div className="flex justify-between text-gray-500 font-medium">
               <span>Payable Amount:</span>
-              <span className="font-bold text-[#F0264C] text-sm">৳ {total.toLocaleString()}</span>
+              <span className="font-bold text-[#F0264C] text-sm">৳ {(redirectOrderInfo?.amount || total).toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-gray-500 font-medium">
               <span>Payment Gateway:</span>

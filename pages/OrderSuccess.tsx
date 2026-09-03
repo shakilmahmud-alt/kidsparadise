@@ -7,7 +7,7 @@ import { Order } from '../types';
 
 const OrderSuccess: React.FC = () => {
   const { orderId } = useParams() as { orderId: string };
-  const { orders } = useStore();
+  const { orders, clearCart } = useStore();
   const location = useLocation();
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -20,11 +20,13 @@ const OrderSuccess: React.FC = () => {
   }, [orders, orderId, location.state]);
 
   useEffect(() => {
+    clearCart();
+    localStorage.removeItem('cart');
     localStorage.removeItem('checkout_cart_backup');
     // Give context a moment to sync if needed
     const timer = setTimeout(() => setIsInitializing(false), 800);
     return () => clearTimeout(timer);
-  }, []);
+  }, [clearCart]);
 
   // Show a clean loading state while verifying the order
   if (isInitializing && !order) {
