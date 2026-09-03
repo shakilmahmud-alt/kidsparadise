@@ -234,8 +234,8 @@ const Checkout: React.FC = () => {
     );
   }
 
-  // Regular Empty Cart screen (only if not submitting / redirecting)
-  if (cart.length === 0) {
+  // Regular Empty Cart screen (only if not submitting / placing order)
+  if (cart.length === 0 && !isSubmitting && !isRedirectingPayment) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 font-sans">
         <div className="text-center">
@@ -397,7 +397,10 @@ const Checkout: React.FC = () => {
                 className={`w-full mt-6 md:mt-10 text-white font-black py-4 md:py-6 rounded-[15px] md:rounded-[20px] shadow-2xl transition-all flex items-center justify-center gap-3 uppercase tracking-[1px] md:tracking-[2px] text-sm md:text-[16px] relative z-10 cursor-pointer ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none' : 'bg-[#F0264C] hover:bg-[#d01c3f] shadow-rose-100/50 active:scale-95'}`}
               >
                 {isSubmitting ? (
-                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Processing Order...</span>
+                  </span>
                 ) : (
                   paymentMethod === 'online' ? 'Proceed to Payment (SSLCommerz)' : 'Confirm Order'
                 )}

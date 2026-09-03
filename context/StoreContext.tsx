@@ -321,16 +321,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     // Keep cart backup in case online payment is cancelled/failed
     localStorage.setItem('checkout_cart_backup', JSON.stringify(cart));
+    setAppliedCoupon(null);
+    localStorage.removeItem('appliedCoupon');
 
-    // If Cash on Delivery, clear cart immediately.
-    // For online payment, cart clearing is deferred until SSLCommerz gateway URL is retrieved
-    // so that cart items and payable total amount are not prematurely zeroed out!
-    if (customerDetails.paymentMethod !== 'Online Payment (Card/MFS)') {
-      setCart([]);
-      setAppliedCoupon(null);
-      localStorage.removeItem('cart');
-      localStorage.removeItem('appliedCoupon');
-    }
     await fetchData();
     return mappedOrder;
   };
