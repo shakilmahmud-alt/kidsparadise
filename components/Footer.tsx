@@ -1,125 +1,151 @@
-
 import React from 'react';
-import { MapPin, Phone, Mail, Facebook, Instagram, Smartphone } from 'lucide-react';
+import { MapPin, Phone, Mail, Facebook } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
 import { useStore } from '../context/StoreContext';
 
 const Footer: React.FC = () => {
-  const { storeInfo, categories } = useStore();
-  const currentYear = new Date().getFullYear();
+  const { storeInfo } = useStore();
+  const currentYear = 2026;
+
+  const bgImage = 'https://kidsparadise.com.bd/wp-content/uploads/2025/09/footer-banner-2.png';
+  const logoImage = 'https://kidsparadise.com.bd/wp-content/uploads/2025/08/cropped-kp-logo.png';
+  const paymentImage = 'https://kidsparadise.com.bd/wp-content/uploads/2025/01/payment.png';
+  const facebookUrl = storeInfo.socials?.facebook || 'https://www.facebook.com/kidsparadisebd';
 
   return (
-    <footer className="bg-black text-gray-300 pt-16 pb-8 text-sm">
-      <div className="container mx-auto px-4 md:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+    <footer 
+      className="relative bg-cover bg-center text-white pt-14 md:pt-16 pb-8 overflow-hidden"
+      style={{ backgroundImage: `url(${bgImage})` }}
+    >
+      {/* Dark Overlay for rich contrast & readability */}
+      <div className="absolute inset-0 bg-black/75 md:bg-black/70 backdrop-blur-[0.5px]"></div>
 
-          {/* Company Info */}
-          <div className="space-y-4 col-span-2 md:col-span-1 lg:col-span-1">
-            <div className="mb-6">
-              {storeInfo.logo_url ? (
-                <img src={storeInfo.logo_url} alt={storeInfo.name} className="h-16 w-auto object-contain" />
-              ) : (
-                <div className="text-rose-500 mb-4">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20.2 7.8l-7.7 7.7a2 2 0 0 1-2.8 0L2 7.8" />
-                    <path d="M2 12l7.7 7.7a2 2 0 0 0 2.8 0l7.7-7.7" />
-                  </svg>
-                </div>
-              )}
-            </div>
-            <p className="leading-relaxed">{storeInfo.footer_description || `${storeInfo.name} - Your one door-step solution for groceries and daily needs. Freshness guaranteed.`}</p>
-            <div className="space-y-3 mt-4">
+      <div className="container mx-auto px-4 md:px-8 relative z-10">
+        
+        {/* Main 3-Column Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-0 items-center">
+
+          {/* Column 1: CONTACT US */}
+          <div className="md:border-r md:border-white/20 md:pr-8 lg:pr-12 space-y-4">
+            <h3 className="font-serif text-lg md:text-xl font-bold tracking-wider text-white mb-5 uppercase">
+              CONTACT US
+            </h3>
+
+            <div className="space-y-3.5 text-xs md:text-[13.5px] text-gray-200">
               <div className="flex items-start gap-3">
-                <MapPin className="text-rose-500 shrink-0" size={18} />
-                <span>{storeInfo.address}</span>
+                <MapPin className="text-gray-300 shrink-0 mt-0.5" size={17} />
+                <span className="leading-relaxed">
+                  {storeInfo.address || 'Jamuna Future Park, Shop#26-31, B#B, Level-1, North Court, Bashundhara, Dhaka.'}
+                </span>
               </div>
+
               <div className="flex items-center gap-3">
-                <Phone className="text-rose-500 shrink-0" size={18} />
-                {storeInfo.phone ? (
-                  <a 
-                    href={`tel:${storeInfo.phone.trim().startsWith('0') ? '+88' + storeInfo.phone.trim() : storeInfo.phone}`}
-                    className="hover:text-rose-500 transition-colors duration-300"
-                  >
-                    {storeInfo.phone}
-                  </a>
-                ) : (
-                  <span>{storeInfo.phone}</span>
-                )}
+                <Phone className="text-gray-300 shrink-0" size={17} />
+                <a 
+                  href={`tel:${(storeInfo.phone || '+88 01726499168').replace(/\s+/g, '')}`}
+                  className="hover:text-[#F0264C] transition-colors font-medium"
+                >
+                  {storeInfo.phone || '+88 01726499168'}
+                </a>
               </div>
+
               <div className="flex items-center gap-3">
-                <Mail className="text-rose-500 shrink-0" size={18} />
-                {storeInfo.email ? (
-                  <a 
-                    href={`mailto:${storeInfo.email.trim()}`}
-                    className="hover:text-rose-500 transition-colors duration-300"
-                  >
-                    {storeInfo.email}
-                  </a>
-                ) : (
-                  <span>{storeInfo.email}</span>
-                )}
+                <Mail className="text-gray-300 shrink-0" size={17} />
+                <a 
+                  href={`mailto:${storeInfo.email || 'info@kidsparadise.com.bd'}`}
+                  className="hover:text-[#F0264C] transition-colors font-medium"
+                >
+                  {storeInfo.email || 'info@kidsparadise.com.bd'}
+                </a>
               </div>
             </div>
           </div>
 
-          {/* Links 1 */}
-          <div>
-            <h3 className="text-white font-bold text-lg mb-6">Company</h3>
-            <ul className="space-y-3">
-              {(storeInfo.footer_links && storeInfo.footer_links.length > 0) ? (
-                storeInfo.footer_links.map((link, idx) => (
-                  <li key={idx}><Link to={link.url} className="hover:text-rose-500 transition-colors">{link.label}</Link></li>
-                ))
-              ) : (
-                <>
-                  <li><Link to="/about-us" className="hover:text-rose-500 transition-colors">About Us</Link></li>
-                  <li><Link to="/contact-us" className="hover:text-rose-500 transition-colors">Contact Us</Link></li>
-                  <li><a href="#" className="hover:text-rose-500 transition-colors">Delivery Information</a></li>
-                  <li><a href="#" className="hover:text-rose-500 transition-colors">Privacy Policy</a></li>
-                  <li><a href="#" className="hover:text-rose-500 transition-colors">Terms & Conditions</a></li>
-                </>
-              )}
-            </ul>
-          </div>
+          {/* Column 2: LOGO, TAGLINE, SOCIAL */}
+          <div className="px-4 md:px-8 lg:px-12 text-center flex flex-col items-center justify-center">
+            <Link to="/" className="inline-block mb-3.5 hover:opacity-95 transition-opacity">
+              <img 
+                src={logoImage} 
+                alt="Kids Paradise" 
+                className="h-16 md:h-20 w-auto object-contain mx-auto drop-shadow-md" 
+              />
+            </Link>
 
-          {/* Links 2 */}
-          <div>
-            <h3 className="text-white font-bold text-lg mb-6">Category</h3>
-            <ul className="space-y-3">
-              {categories
-                .filter(cat => !cat.parentId)
-                .slice(0, 5)
-                .map(cat => (
-                  <li key={cat.id}>
-                    <Link to={`/category/${cat.slug || encodeURIComponent(cat.name)}`} className="hover:text-rose-500 transition-colors">
-                      {cat.name}
-                    </Link>
-                  </li>
-                ))}
-            </ul>
-          </div>
+            <p className="text-xs md:text-[13px] text-gray-200 font-medium leading-relaxed max-w-md mx-auto mb-4">
+              Kids Toy Shop, Baby Apparels, Baby Care, Baby Gear & Travel, Baby Furniture & Mother Needs
+            </p>
 
-          {/* Social */}
-          <div className="col-span-2 md:col-span-1 lg:col-span-1">
-            <div>
-              <h3 className="text-white font-bold text-lg mb-6">Social Links</h3>
-              <div className="flex gap-4 mb-6">
-                {storeInfo.socials?.facebook && <a href={storeInfo.socials.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-[#F0264C] transition-colors cursor-pointer"><Facebook size={18} /></a>}
-                {storeInfo.socials?.instagram && <a href={storeInfo.socials.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-[#F0264C] transition-colors cursor-pointer"><Instagram size={18} /></a>}
-                {(!storeInfo.socials?.facebook && !storeInfo.socials?.instagram) && <span className="text-gray-500 text-sm">No social links configured.</span>}
-              </div>
+            {/* Social Button */}
+            <div className="flex justify-center">
+              <a 
+                href={facebookUrl} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                aria-label="Facebook"
+                className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white text-gray-900 hover:bg-[#F0264C] hover:text-white transition-all flex items-center justify-center shadow-md cursor-pointer"
+              >
+                <Facebook size={16} fill="currentColor" />
+              </a>
             </div>
           </div>
+
+          {/* Column 3: INFORMATION */}
+          <div className="md:border-l md:border-white/20 md:pl-8 lg:pl-12 space-y-4">
+            <h3 className="font-serif text-lg md:text-xl font-bold tracking-wider text-white mb-5 uppercase">
+              INFORMATION
+            </h3>
+
+            <ul className="space-y-2.5 text-xs md:text-[13.5px] text-gray-200">
+              <li>
+                <Link to="/about-us" className="hover:text-[#F0264C] transition-colors block py-0.5">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact-us" className="hover:text-[#F0264C] transition-colors block py-0.5">
+                  Contact Us
+                </Link>
+              </li>
+              <li>
+                <Link to="/my-account" className="hover:text-[#F0264C] transition-colors block py-0.5">
+                  My account
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy-policy" className="hover:text-[#F0264C] transition-colors block py-0.5">
+                  Privacy Policy
+                </Link>
+              </li>
+            </ul>
+          </div>
+
         </div>
 
-        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
-          <div className="text-[11px] md:text-sm">
-            © {currentYear} {storeInfo.name}. All rights reserved. <span className="text-gray-500 mx-1">|</span> Developed by: <a href="https://shakilmahmud.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-rose-500 hover:text-rose-400 font-bold transition-colors">Shakil Mahmud</a>
+        {/* Bottom Bar: Copyright & Payment Badges */}
+        <div className="border-t border-white/20 pt-6 mt-10 md:mt-12 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+          <p className="text-xs text-gray-300 font-medium">
+            © {currentYear} Kids Paradise. All rights reserved. Developed by:{' '}
+            <a 
+              href="https://shakilmahmud.vercel.app/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-white hover:text-[#F0264C] font-semibold transition-colors"
+            >
+              Shakil Mahmud
+            </a>
+          </p>
+
+          <div>
+            <img 
+              src={paymentImage} 
+              alt="Payment Methods: Visa, MasterCard, Amex, PayPal" 
+              className="h-6 md:h-7 w-auto object-contain opacity-95" 
+            />
           </div>
         </div>
+
       </div>
-    </footer >
+    </footer>
   );
 };
 
