@@ -58,6 +58,7 @@ const Admin: React.FC = () => {
   const [prodFilterSubCat, setProdFilterSubCat] = useState('');
   const [prodFilterStatus, setProdFilterStatus] = useState('all');
   const [prodFilterBrand, setProdFilterBrand] = useState('');
+  const [showZeroStock, setShowZeroStock] = useState(true); // Toggle: ON = show all including zero stock, OFF = only in-stock
   const [prodSortColumn, setProdSortColumn] = useState<'product' | 'price' | null>(null);
   const [prodSortDirection, setProdSortDirection] = useState<'asc' | 'desc'>('asc');
   const [prodPage, setProdPage] = useState(1);
@@ -589,11 +590,11 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
 
   // Helper to determine product stock status
   const isProductInStock = (p: Product) => {
-    if (p.variants && p.variants.length > 0) {
-      return p.variants.some(v => (v.stock ?? 0) > 0);
+    if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
+      return p.variants.some(v => Number(v.stock || 0) > 0);
     }
-    if ('stock' in p) {
-      return ((p as any).stock ?? 0) > 0;
+    if (p.stock !== undefined && p.stock !== null) {
+      return Number(p.stock) > 0;
     }
     return true; // Simple products default to In Stock
   };
@@ -675,6 +676,13 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
       result = result.filter(p => p.brand === prodFilterBrand);
     }
 
+    // Zero Stock Toggle Filter:
+    // When ON (showZeroStock === true): All products including zero stock are shown
+    // When OFF (showZeroStock === false): Only products with stock > 0 are shown
+    if (!showZeroStock) {
+      result = result.filter(p => isProductInStock(p));
+    }
+
     // Sorting
     if (prodSortColumn) {
       result.sort((a, b) => {
@@ -696,7 +704,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
     }
 
     return result;
-  }, [products, prodSearch, prodFilterCat, prodFilterSubCat, prodFilterStatus, prodFilterBrand, prodSortColumn, prodSortDirection, categories]);
+  }, [products, prodSearch, prodFilterCat, prodFilterSubCat, prodFilterStatus, prodFilterBrand, prodSortColumn, prodSortDirection, categories, showZeroStock]);
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const activePage = Math.max(1, Math.min(prodPage, totalPages || 1));
@@ -2488,9 +2496,58 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
           <div className="space-y-6 animate-in fade-in duration-500">
             {!(isAdding === 'product' || editingItem?.type === 'product') ? (
               <>
-                 <div className="flex justify-between items-center">
-                  <div><h2 className="text-2xl font-black text-slate-800 tracking-tight">Products</h2><p className="text-slate-400 text-sm">Manage your product catalog.</p></div>
-                  <button onClick={() => { setIsAdding('product'); setProdForm(prev => ({ ...prev, sku: getNextSku() })); window.scrollTo({ top: 0, behavior: 'instant' }); }} className="bg-[#e92c5d] text-white px-8 py-3.5 rounded-xl font-black uppercase text-[11px] flex items-center gap-2 shadow-xl hover:bg-[#c81d4a] transition-all"><Plus size={18} /> Add Product</button>
+                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">Products</h2>
+                    <p className="text-slate-400 text-sm">Manage your product catalog.</p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3.5">
+                    {/* Zero Stock Toggle Switch Button */}
+                    <div 
+                      onClick={() => {
+                        setShowZeroStock(prev => !prev);
+                        setProdPage(1);
+                      }}
+                      className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-2xl border border-gray-200 shadow-xs cursor-pointer hover:border-gray-300 hover:shadow-md transition-all select-none group"
+                      title={showZeroStock ? 'Click to hide zero stock products' : 'Click to show all products including zero stock'}
+                    >
+                      <div className="flex flex-col text-left">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${showZeroStock ? 'bg-[#e92c5d] animate-pulse' : 'bg-emerald-500'}`}></span>
+                          <span className="text-xs font-bold text-slate-800 leading-tight">
+                            {showZeroStock ? 'All Products' : 'In-Stock Only'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-medium ml-3.5">
+                          {showZeroStock ? 'Including zero stock' : 'Hiding zero stock'}
+                        </span>
+                      </div>
+
+                      {/* Animated Switch Track & Knob */}
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={showZeroStock}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          showZeroStock ? 'bg-[#e92c5d]' : 'bg-slate-300'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                            showZeroStock ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    <button 
+                      onClick={() => { setIsAdding('product'); setProdForm(prev => ({ ...prev, sku: getNextSku() })); window.scrollTo({ top: 0, behavior: 'instant' }); }} 
+                      className="bg-[#e92c5d] text-white px-8 py-3.5 rounded-xl font-black uppercase text-[11px] flex items-center gap-2 shadow-xl hover:bg-[#c81d4a] transition-all cursor-pointer"
+                    >
+                      <Plus size={18} /> Add Product
+                    </button>
+                  </div>
                 </div>
 
                 {/* Search & Filters Panel */}
@@ -2569,10 +2626,15 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                   </div>
 
                   {/* Summary & Clear Filters */}
-                  {(prodSearch || prodFilterCat || prodFilterSubCat || prodFilterStatus !== 'all' || prodFilterBrand) && (
+                  {(prodSearch || prodFilterCat || prodFilterSubCat || prodFilterStatus !== 'all' || prodFilterBrand || !showZeroStock) && (
                     <div className="flex justify-between items-center text-xs font-bold text-slate-400 pt-2 px-1">
-                      <div>
-                        Found <span className="text-[#e92c5d]">{filteredProducts.length}</span> matching products
+                      <div className="flex items-center gap-2">
+                        <span>Found <span className="text-[#e92c5d]">{filteredProducts.length}</span> matching products</span>
+                        {!showZeroStock && (
+                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-black">
+                            In-Stock Filter Active
+                          </span>
+                        )}
                       </div>
                       <button
                         onClick={() => {
@@ -2581,8 +2643,9 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                           setProdFilterSubCat('');
                           setProdFilterStatus('all');
                           setProdFilterBrand('');
+                          setShowZeroStock(true);
                         }}
-                        className="text-rose-600 hover:text-rose-800 transition-colors uppercase tracking-wider text-[10px] flex items-center gap-1 font-black"
+                        className="text-rose-600 hover:text-rose-800 transition-colors uppercase tracking-wider text-[10px] flex items-center gap-1 font-black cursor-pointer"
                       >
                         Clear All Filters
                       </button>
