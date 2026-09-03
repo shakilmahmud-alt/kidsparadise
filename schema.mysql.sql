@@ -44,10 +44,14 @@ CREATE TABLE IF NOT EXISTS `products` (
   `description` LONGTEXT NULL,
   `badge` VARCHAR(100) NULL,
   `is_featured` TINYINT(1) DEFAULT 0,
+  `stock` INT DEFAULT 100,
   `variants` JSON NULL,
   `filter_attributes` JSON NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Run this command in phpMyAdmin if updating an existing database:
+-- ALTER TABLE products ADD COLUMN stock INT DEFAULT 100 AFTER is_featured;
 
 CREATE TABLE IF NOT EXISTS `attributes` (
   `id` BIGINT AUTO_INCREMENT PRIMARY KEY,

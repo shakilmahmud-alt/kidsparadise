@@ -94,6 +94,9 @@ export const api = {
   async deleteProduct(id: string) {
     return await request(`/api/products/${id}`, { method: 'DELETE' });
   },
+  async updateBulkStock(payload: { productIds?: string[]; stock: number; category?: string }) {
+    return await request('/api/products-bulk-stock', { method: 'PUT', body: JSON.stringify(payload) });
+  },
 
   // Categories
   async addCategory(category: any) {

@@ -12,6 +12,15 @@ function safeJson(val, defaultVal = null) {
   }
 }
 
+let stockColumnChecked = false;
+async function ensureStockColumn() {
+  if (stockColumnChecked) return;
+  try {
+    await query('ALTER TABLE products ADD COLUMN stock INT DEFAULT 100');
+  } catch (e) {}
+  stockColumnChecked = true;
+}
+
 export default async function handler(req, res) {
   const user = verifyToken(req);
   const path = req.path || (req.url ? req.url.split('?')[0] : '') || '';
@@ -76,6 +85,12 @@ export default async function handler(req, res) {
           }
         }
 
+        const effectiveStock = p.stock !== undefined && p.stock !== null ? Number(p.stock) : (
+          variants.length > 0 
+            ? variants.reduce((s, v) => s + (v.stock !== undefined && v.stock !== null ? Number(v.stock) : 100), 0)
+            : 100
+        );
+
         return {
           id: String(p.id),
           name: p.name,
@@ -86,6 +101,7 @@ export default async function handler(req, res) {
           brand: p.brand || undefined,
           unit: p.unit || undefined,
           sku: p.sku || undefined,
+          stock: effectiveStock,
           images: safeJson(p.images, p.image_url ? [p.image_url] : []),
           shortDescription: p.short_description || undefined,
           description: p.description || '',
@@ -263,7 +279,22 @@ export default async function handler(req, res) {
       }
     }
 
-    // 3. Products CRUD
+    // 3. Products CRUD & Bulk Stock Update
+    if (path === '/api/products-bulk-stock' && method === 'PUT') {
+      const { productIds, stock, category } = req.body;
+      const stockNum = Number(stock || 0);
+      await ensureStockColumn();
+      if (category && category !== 'All') {
+        await query('UPDATE products SET stock = ? WHERE category LIKE ?', [stockNum, `%${category}%`]);
+      } else if (productIds && Array.isArray(productIds) && productIds.length > 0) {
+        const placeholders = productIds.map(() => '?').join(',');
+        await query(`UPDATE products SET stock = ? WHERE id IN (${placeholders})`, [stockNum, ...productIds]);
+      } else {
+        await query('UPDATE products SET stock = ?', [stockNum]);
+      }
+      return res.status(200).json({ success: true });
+    }
+
     if (path.startsWith('/api/products') || path.includes('/products')) {
       if (method === 'POST') {
         const p = req.body;
@@ -273,23 +304,47 @@ export default async function handler(req, res) {
           const varPrices = variants.map(v => Number(v.price) || 0).filter(pr => pr > 0);
           if (varPrices.length > 0) price = Math.min(...varPrices);
         }
-        const result = await query(
-          `INSERT INTO products (
-            name, slug, price, original_price, category, brand, unit, sku,
-            images, image_url, short_description, description, badge,
-            is_featured, variants, filter_attributes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            p.name, p.slug || p.name.toLowerCase().replace(/\s+/g, '-'),
-            price, p.originalPrice || null,
-            Array.isArray(p.category) ? p.category.join(', ') : (p.category || ''),
-            p.brand || null, p.unit || null, p.sku || null,
-            JSON.stringify(p.images || []), p.images?.[0] || null,
-            p.shortDescription || null, p.description || '',
-            p.badge || null, p.isFeatured ? 1 : 0,
-            JSON.stringify(variants), JSON.stringify(p.filterAttributes || [])
-          ]
-        );
+        await ensureStockColumn();
+        const stockVal = p.stock !== undefined && p.stock !== null ? Number(p.stock) : 100;
+        let result;
+        try {
+          result = await query(
+            `INSERT INTO products (
+              name, slug, price, original_price, category, brand, unit, sku,
+              images, image_url, short_description, description, badge,
+              is_featured, variants, filter_attributes, stock
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              p.name, p.slug || p.name.toLowerCase().replace(/\s+/g, '-'),
+              price, p.originalPrice || null,
+              Array.isArray(p.category) ? p.category.join(', ') : (p.category || ''),
+              p.brand || null, p.unit || null, p.sku || null,
+              JSON.stringify(p.images || []), p.images?.[0] || null,
+              p.shortDescription || null, p.description || '',
+              p.badge || null, p.isFeatured ? 1 : 0,
+              JSON.stringify(variants), JSON.stringify(p.filterAttributes || []),
+              stockVal
+            ]
+          );
+        } catch (e) {
+          result = await query(
+            `INSERT INTO products (
+              name, slug, price, original_price, category, brand, unit, sku,
+              images, image_url, short_description, description, badge,
+              is_featured, variants, filter_attributes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              p.name, p.slug || p.name.toLowerCase().replace(/\s+/g, '-'),
+              price, p.originalPrice || null,
+              Array.isArray(p.category) ? p.category.join(', ') : (p.category || ''),
+              p.brand || null, p.unit || null, p.sku || null,
+              JSON.stringify(p.images || []), p.images?.[0] || null,
+              p.shortDescription || null, p.description || '',
+              p.badge || null, p.isFeatured ? 1 : 0,
+              JSON.stringify(variants), JSON.stringify(p.filterAttributes || [])
+            ]
+          );
+        }
         return res.status(201).json({ id: result.insertId });
       }
 
@@ -302,25 +357,56 @@ export default async function handler(req, res) {
           const varPrices = variants.map(v => Number(v.price) || 0).filter(pr => pr > 0);
           if (varPrices.length > 0) price = Math.min(...varPrices);
         }
-        await query(
-          `UPDATE products SET
-            name = ?, slug = ?, price = ?, original_price = ?, category = ?,
-            brand = ?, unit = ?, sku = ?, images = ?, image_url = ?,
-            short_description = ?, description = ?, badge = ?,
-            is_featured = ?, variants = ?, filter_attributes = ?
-          WHERE id = ?`,
-          [
-            p.name, p.slug || p.name.toLowerCase().replace(/\s+/g, '-'),
-            price, p.originalPrice || null,
-            Array.isArray(p.category) ? p.category.join(', ') : (p.category || ''),
-            p.brand || null, p.unit || null, p.sku || null,
-            JSON.stringify(p.images || []), p.images?.[0] || null,
-            p.shortDescription || null, p.description || '',
-            p.badge || null, p.isFeatured ? 1 : 0,
-            JSON.stringify(p.variants || []), JSON.stringify(p.filterAttributes || []),
-            id
-          ]
-        );
+        await ensureStockColumn();
+        let stockVal = 100;
+        if (p.stock !== undefined && p.stock !== null && p.stock !== '') {
+          stockVal = Number(p.stock);
+        } else if (variants && variants.length > 0) {
+          stockVal = variants.reduce((sum, v) => sum + (v.stock !== undefined && v.stock !== null ? Number(v.stock) : 100), 0);
+        }
+
+        try {
+          await query(
+            `UPDATE products SET
+              name = ?, slug = ?, price = ?, original_price = ?, category = ?,
+              brand = ?, unit = ?, sku = ?, images = ?, image_url = ?,
+              short_description = ?, description = ?, badge = ?,
+              is_featured = ?, variants = ?, filter_attributes = ?, stock = ?
+            WHERE id = ?`,
+            [
+              p.name, p.slug || p.name.toLowerCase().replace(/\s+/g, '-'),
+              price, p.originalPrice || null,
+              Array.isArray(p.category) ? p.category.join(', ') : (p.category || ''),
+              p.brand || null, p.unit || null, p.sku || null,
+              JSON.stringify(p.images || []), p.images?.[0] || null,
+              p.shortDescription || null, p.description || '',
+              p.badge || null, p.isFeatured ? 1 : 0,
+              JSON.stringify(variants), JSON.stringify(p.filterAttributes || []),
+              stockVal,
+              id
+            ]
+          );
+        } catch (updateErr) {
+          await query(
+            `UPDATE products SET
+              name = ?, slug = ?, price = ?, original_price = ?, category = ?,
+              brand = ?, unit = ?, sku = ?, images = ?, image_url = ?,
+              short_description = ?, description = ?, badge = ?,
+              is_featured = ?, variants = ?, filter_attributes = ?
+            WHERE id = ?`,
+            [
+              p.name, p.slug || p.name.toLowerCase().replace(/\s+/g, '-'),
+              price, p.originalPrice || null,
+              Array.isArray(p.category) ? p.category.join(', ') : (p.category || ''),
+              p.brand || null, p.unit || null, p.sku || null,
+              JSON.stringify(p.images || []), p.images?.[0] || null,
+              p.shortDescription || null, p.description || '',
+              p.badge || null, p.isFeatured ? 1 : 0,
+              JSON.stringify(variants), JSON.stringify(p.filterAttributes || []),
+              id
+            ]
+          );
+        }
         return res.status(200).json({ success: true });
       }
 

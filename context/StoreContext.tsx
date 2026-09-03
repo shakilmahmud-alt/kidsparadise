@@ -90,6 +90,7 @@ interface StoreContextType {
   setShowZeroStockFrontend: (val: boolean) => Promise<void>;
   frontendProducts: Product[];
   isProductInStock: (p: Product) => boolean;
+  updateBulkStock: (payload: { productIds?: string[]; stock: number; category?: string }) => Promise<void>;
 }
 
 export const normalizeProduct = (p: Product): Product => {
@@ -108,10 +109,17 @@ export const normalizeProduct = (p: Product): Product => {
     }
   }
 
+  let stock = p.stock !== undefined && p.stock !== null ? Number(p.stock) : (
+    variants.length > 0
+      ? variants.reduce((sum, v) => sum + (v.stock !== undefined && v.stock !== null ? Number(v.stock) : 100), 0)
+      : 100
+  );
+
   return {
     ...p,
     price,
     originalPrice: originalPrice && originalPrice > 0 ? originalPrice : undefined,
+    stock,
     variants
   };
 };
@@ -540,6 +548,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       },
       updateProduct: async (id, p) => {
         await api.updateProduct(id, p);
+        await fetchData();
+      },
+      updateBulkStock: async (payload) => {
+        await api.updateBulkStock(payload);
         await fetchData();
       },
       deleteProduct: async (id) => {

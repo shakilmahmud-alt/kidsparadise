@@ -34,7 +34,8 @@ const Admin: React.FC = () => {
     banners, addBanner, updateBanner, deleteBanner,
     homeSections, addHomeSection, updateHomeSection, deleteHomeSection,
     blogPosts, addBlogPost, updateBlogPost, deleteBlogPost,
-    showZeroStockFrontend, setShowZeroStockFrontend
+    showZeroStockFrontend, setShowZeroStockFrontend,
+    updateBulkStock
   } = useStore();
 
   const { tab } = useParams();
@@ -859,16 +860,17 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
         if (validPrices.length > 0) {
           updatePayload.price = Math.min(...validPrices);
         }
+        updatePayload.stock = edited.variants!.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
       } else {
         updatePayload.stock = edited.stock;
-        if (p.variants && p.variants.length === 1) {
-          updatePayload.variants = [{
-            ...p.variants[0],
-            price: edited.price,
-            originalPrice: edited.originalPrice,
-            stock: edited.stock
-          }];
-        }
+        updatePayload.variants = [{
+          id: p.id || 'default',
+          sku: p.sku || '',
+          price: edited.price,
+          originalPrice: edited.originalPrice,
+          stock: edited.stock,
+          attributeValues: {}
+        }];
       }
 
       await updateProduct(productId, updatePayload);
@@ -887,6 +889,47 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
       alert("Failed to save product: " + (err.message || err));
     } finally {
       setInlineSaving(prev => ({ ...prev, [productId]: false }));
+    }
+  };
+
+  const [isSavingAll, setIsSavingAll] = useState(false);
+  const handleSaveAllInline = async () => {
+    const editIds = Object.keys(inlineEdits);
+    if (editIds.length === 0) return;
+    setIsSavingAll(true);
+    try {
+      await Promise.all(editIds.map(id => saveInlineProduct(id)));
+    } finally {
+      setIsSavingAll(false);
+    }
+  };
+
+  const [showBulkStockModal, setShowBulkStockModal] = useState(false);
+  const [bulkStockTarget, setBulkStockTarget] = useState<'all' | 'category' | 'filtered'>('all');
+  const [bulkStockCategory, setBulkStockCategory] = useState<string>('');
+  const [bulkStockQty, setBulkStockQty] = useState<number>(100);
+  const [isApplyingBulkStock, setIsApplyingBulkStock] = useState(false);
+
+  const handleApplyBulkStock = async () => {
+    if (bulkStockQty < 0) return alert("Stock quantity cannot be negative");
+    setIsApplyingBulkStock(true);
+    try {
+      if (bulkStockTarget === 'all') {
+        await updateBulkStock({ stock: bulkStockQty });
+      } else if (bulkStockTarget === 'category') {
+        if (!bulkStockCategory) return alert("Please select a category");
+        await updateBulkStock({ category: bulkStockCategory, stock: bulkStockQty });
+      } else if (bulkStockTarget === 'filtered') {
+        const ids = filteredProducts.map(p => p.id);
+        if (ids.length === 0) return alert("No products match the current filters");
+        await updateBulkStock({ productIds: ids, stock: bulkStockQty });
+      }
+      setShowBulkStockModal(false);
+      alert(`Successfully updated stock to ${bulkStockQty} for selected products!`);
+    } catch (err: any) {
+      alert("Failed to bulk update stock: " + (err.message || err));
+    } finally {
+      setIsApplyingBulkStock(false);
     }
   };
 
@@ -2320,12 +2363,21 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                       </button>
                     </div>
 
-                    <button 
-                      onClick={() => { setIsAdding('product'); setProdForm(prev => ({ ...prev, sku: getNextSku() })); window.scrollTo({ top: 0, behavior: 'instant' }); }} 
-                      className="bg-[#e92c5d] text-white px-8 py-3.5 rounded-xl font-black uppercase text-[11px] flex items-center gap-2 shadow-xl hover:bg-[#c81d4a] transition-all cursor-pointer"
-                    >
-                      <Plus size={18} /> Add Product
-                    </button>
+                      <button 
+                        onClick={() => setShowBulkStockModal(true)}
+                        className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-3.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                        title="Bulk update stock for multiple products"
+                      >
+                        <Layers size={16} className="text-rose-400" />
+                        <span>Bulk Stock</span>
+                      </button>
+
+                      <button 
+                        onClick={() => { setIsAdding('product'); setProdForm(prev => ({ ...prev, sku: getNextSku() })); window.scrollTo({ top: 0, behavior: 'instant' }); }} 
+                        className="bg-[#e92c5d] text-white px-8 py-3.5 rounded-xl font-black uppercase text-[11px] flex items-center gap-2 shadow-xl hover:bg-[#c81d4a] transition-all cursor-pointer"
+                      >
+                        <Plus size={18} /> Add Product
+                      </button>
                   </div>
                 </div>
 
@@ -2460,7 +2512,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                               setProdSortDirection('asc');
                             }
                           }}
-                          className="px-6 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors select-none"
+                          className="px-6 py-6 min-w-[170px] cursor-pointer hover:bg-slate-100/50 transition-colors select-none"
                         >
                           <div className="flex items-center gap-1.5">
                             <span>Price Details (৳)</span>
@@ -2480,7 +2532,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                               setProdSortDirection('asc');
                             }
                           }}
-                          className="px-6 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors select-none"
+                          className="px-6 py-6 min-w-[150px] cursor-pointer hover:bg-slate-100/50 transition-colors select-none"
                         >
                           <div className="flex items-center gap-1.5">
                             <span>Stock Qty</span>
@@ -2537,13 +2589,13 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                                         >
                                           {vLabel}
                                         </span>
-                                        <div className="relative w-24">
-                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">৳</span>
+                                        <div className="relative w-28 min-w-[110px]">
+                                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-bold">৳</span>
                                           <input
                                             type="number"
                                             value={v.price}
                                             onChange={(e) => handleVariantPriceChange(p.id, vIdx, Number(e.target.value))}
-                                            className="w-full pl-5 pr-1.5 py-1 bg-slate-50 hover:bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-800 focus:bg-white focus:border-[#e92c5d] focus:ring-1 focus:ring-[#e92c5d] outline-none transition-all"
+                                            className="w-full pl-6 pr-2 py-1 bg-slate-50 hover:bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-800 focus:bg-white focus:border-[#e92c5d] focus:ring-1 focus:ring-[#e92c5d] outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                             placeholder="Price"
                                           />
                                         </div>
@@ -2552,29 +2604,29 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                                   })}
                                 </div>
                               ) : (
-                                <div className="flex flex-col gap-1.5 w-28 py-0.5">
+                                <div className="flex flex-col gap-1.5 w-36 min-w-[145px] py-0.5">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 w-7">Sale:</span>
+                                    <span className="text-[10px] font-black uppercase text-slate-400 w-8 shrink-0">Sale:</span>
                                     <div className="relative flex-1">
-                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">৳</span>
+                                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-bold">৳</span>
                                       <input
                                         type="number"
                                         value={editedVals.price}
                                         onChange={(e) => handleInlinePriceChange(p.id, Number(e.target.value))}
-                                        className="w-full pl-5 pr-1.5 py-1 bg-slate-50 hover:bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-800 focus:bg-white focus:border-[#e92c5d] focus:ring-1 focus:ring-[#e92c5d] outline-none transition-all"
+                                        className="w-full pl-6 pr-2 py-1 bg-slate-50 hover:bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-800 focus:bg-white focus:border-[#e92c5d] focus:ring-1 focus:ring-[#e92c5d] outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                       />
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 w-7">MRP:</span>
+                                    <span className="text-[10px] font-black uppercase text-slate-400 w-8 shrink-0">MRP:</span>
                                     <div className="relative flex-1">
-                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">৳</span>
+                                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400">৳</span>
                                       <input
                                         type="number"
                                         placeholder="Optional"
                                         value={editedVals.originalPrice ?? ''}
                                         onChange={(e) => handleInlineOriginalPriceChange(p.id, e.target.value ? Number(e.target.value) : undefined)}
-                                        className="w-full pl-5 pr-1.5 py-0.5 bg-transparent border-b border-dashed border-slate-200 text-[10px] font-semibold text-slate-500 focus:border-[#e92c5d] outline-none transition-all"
+                                        className="w-full pl-6 pr-2 py-0.5 bg-transparent border-b border-dashed border-slate-200 text-[10px] font-semibold text-slate-500 focus:border-[#e92c5d] outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                       />
                                     </div>
                                   </div>
@@ -2586,7 +2638,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                                 <div className="flex flex-col gap-2 py-0.5">
                                   {editedVals.variants!.map((v, vIdx) => {
                                     const vLabel = getVariantLabel(v, vIdx);
-                                    const vStock = Number(v.stock || 0);
+                                    const vStock = v.stock !== undefined && v.stock !== null ? Number(v.stock) : 100;
                                     return (
                                       <div key={v.id || vIdx} className="flex items-center gap-2">
                                         <span 
@@ -2600,7 +2652,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                                             type="number"
                                             value={vStock}
                                             onChange={(e) => handleVariantStockChange(p.id, vIdx, Number(e.target.value))}
-                                            className="w-16 px-2 py-1 bg-slate-50 hover:bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-800 focus:bg-white focus:border-[#e92c5d] focus:ring-1 focus:ring-[#e92c5d] outline-none transition-all"
+                                            className="w-20 px-2 py-1 bg-slate-50 hover:bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-800 focus:bg-white focus:border-[#e92c5d] focus:ring-1 focus:ring-[#e92c5d] outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                             placeholder="Stock"
                                           />
                                           <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${vStock > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
@@ -2611,7 +2663,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                                     );
                                   })}
                                   <div className="text-[10px] font-black text-slate-400 pt-0.5">
-                                    Total: <span className="text-slate-700 font-extrabold">{editedVals.variants!.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)}</span> pcs
+                                    Total: <span className="text-slate-700 font-extrabold">{editedVals.variants!.reduce((sum, v) => sum + (v.stock !== undefined && v.stock !== null ? Number(v.stock) : 100), 0)}</span> pcs
                                   </div>
                                 </div>
                               ) : (
@@ -2620,10 +2672,10 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                                     type="number"
                                     value={editedVals.stock}
                                     onChange={(e) => handleInlineStockChange(p.id, Number(e.target.value))}
-                                    className="w-20 px-2.5 py-1.5 bg-slate-50 hover:bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-800 focus:bg-white focus:border-[#e92c5d] focus:ring-1 focus:ring-[#e92c5d] outline-none transition-all"
+                                    className="w-24 px-2.5 py-1.5 bg-slate-50 hover:bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-800 focus:bg-white focus:border-[#e92c5d] focus:ring-1 focus:ring-[#e92c5d] outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   />
-                                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${editedVals.stock > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
-                                    {editedVals.stock > 0 ? 'In Stock' : 'Out'}
+                                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${Number(editedVals.stock) > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
+                                    {Number(editedVals.stock) > 0 ? 'In Stock' : 'Out'}
                                   </span>
                                 </div>
                               )}
@@ -2724,6 +2776,152 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                       >
                         <ChevronRight size={18} />
                       </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Floating Save All Changes Bar */}
+                {Object.keys(inlineEdits).length > 0 && (
+                  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 backdrop-blur-md text-white px-6 py-3.5 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center gap-6 animate-in slide-in-from-bottom-5 duration-300">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#e92c5d] animate-ping" />
+                      <span className="text-xs font-bold text-slate-200">
+                        You have <strong className="text-white font-extrabold text-sm">{Object.keys(inlineEdits).length}</strong> unsaved product change(s)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setInlineEdits({})}
+                        disabled={isSavingAll}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                      >
+                        Discard
+                      </button>
+                      <button
+                        onClick={handleSaveAllInline}
+                        disabled={isSavingAll}
+                        className="bg-[#e92c5d] hover:bg-[#c81d4a] text-white px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-rose-900/40 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                      >
+                        {isSavingAll ? (
+                          <>
+                            <RefreshCw size={13} className="animate-spin" />
+                            <span>Saving All...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Save size={13} />
+                            <span>Save All ({Object.keys(inlineEdits).length})</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bulk Stock Update Modal */}
+                {showBulkStockModal && (
+                  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 space-y-6 animate-in zoom-in-95 duration-200">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#e92c5d] flex items-center justify-center">
+                            <Layers size={20} />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-black text-slate-800">Bulk Stock Update</h3>
+                            <p className="text-xs text-slate-400 font-medium">Update stock quantity for multiple products at once</p>
+                          </div>
+                        </div>
+                        <button onClick={() => setShowBulkStockModal(false)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer">
+                          <X size={18} />
+                        </button>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-[11px] font-black uppercase tracking-wider text-slate-500 block mb-2">Apply To:</label>
+                          <div className="grid grid-cols-3 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setBulkStockTarget('all')}
+                              className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${bulkStockTarget === 'all' ? 'bg-[#e92c5d] text-white border-[#e92c5d] shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                            >
+                              All Products
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setBulkStockTarget('category')}
+                              className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${bulkStockTarget === 'category' ? 'bg-[#e92c5d] text-white border-[#e92c5d] shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                            >
+                              By Category
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setBulkStockTarget('filtered')}
+                              className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${bulkStockTarget === 'filtered' ? 'bg-[#e92c5d] text-white border-[#e92c5d] shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                            >
+                              Filtered ({filteredProducts.length})
+                            </button>
+                          </div>
+                        </div>
+
+                        {bulkStockTarget === 'category' && (
+                          <div>
+                            <label className="text-[11px] font-black uppercase tracking-wider text-slate-500 block mb-1.5">Select Category:</label>
+                            <select
+                              value={bulkStockCategory}
+                              onChange={(e) => setBulkStockCategory(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-[#e92c5d]"
+                            >
+                              <option value="">-- Choose Category --</option>
+                              {categories.map(c => (
+                                <option key={c.id} value={c.name}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="text-[11px] font-black uppercase tracking-wider text-slate-500 block mb-1.5">New Stock Quantity (pcs):</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={bulkStockQty}
+                            onChange={(e) => setBulkStockQty(Math.max(0, Number(e.target.value)))}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-black text-slate-800 outline-none focus:border-[#e92c5d] focus:bg-white transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            placeholder="e.g. 50 or 100"
+                          />
+                          <p className="text-[10px] text-slate-400 mt-1">Tip: Setting stock to 0 marks products as Out of Stock.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => setShowBulkStockModal(false)}
+                          className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleApplyBulkStock}
+                          disabled={isApplyingBulkStock}
+                          className="bg-[#e92c5d] hover:bg-[#c81d4a] text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-rose-200 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                        >
+                          {isApplyingBulkStock ? (
+                            <>
+                              <RefreshCw size={14} className="animate-spin" />
+                              <span>Updating...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Check size={14} />
+                              <span>Apply & Save</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
