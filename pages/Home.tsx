@@ -864,9 +864,15 @@ const Home: React.FC = () => {
       {/* Find your products Category Carousel Slider (Matching Reference Image 4 & 5) */}
       <CategorySlider />
 
-      {/* Dynamic Home Sections */}
+      {/* Toys Showcase Section */}
+      <ToysShowcase />
+
+      {/* Gear & Travel Showcase Section */}
+      <GearTravelShowcase />
+
+      {/* Additional Dynamic Home Sections */}
       {homeSections
-        .filter(s => s.isActive)
+        .filter(s => s.isActive && s.id !== 'popular-items' && !s.title.toLowerCase().includes('popular') && !s.title.toLowerCase().includes('toys'))
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map(section => {
           let items = products;
@@ -889,7 +895,6 @@ const Home: React.FC = () => {
               const validCategoryIds = [targetCategory.id, ...getDescendantIds(targetCategory.id)];
 
               // 3. Filter products whose category name matches any of the valid category names
-              // (Since products store category name as string, we map back to names)
               const validCategoryNames = categories
                 .filter(c => validCategoryIds.includes(c.id))
                 .map(c => c.name);
@@ -924,22 +929,7 @@ const Home: React.FC = () => {
               </section>
             );
           } else if (items.length === 0) {
-            sectionContent = (
-              <section key={section.id} className="container mx-auto px-4 md:px-8 mb-6 md:mb-16 opacity-50">
-                <h2 className="text-2xl font-bold text-gray-800 border-l-4 border-gray-300 pl-4 mb-6">{section.title}</h2>
-                <div className="bg-gray-50 border border-gray-100 rounded-xl p-8 text-center">
-                  <p className="text-gray-400 font-bold mb-2">No items found for this section.</p>
-                  <p className="text-xs text-gray-400">Filter: {section.filterType} {section.filterValue ? `(${section.filterValue})` : ''}</p>
-                </div>
-              </section>
-            );
-          } else if (section.id === 'popular-items' || section.title.toLowerCase().includes('popular') || section.title.toLowerCase().includes('toys')) {
-            sectionContent = (
-              <React.Fragment key={section.id}>
-                <ToysShowcase />
-                <GearTravelShowcase />
-              </React.Fragment>
-            );
+            sectionContent = null;
           } else if (section.type === 'slider') {
             sectionContent = <SliderSection key={section.id} section={section} products={items} />;
           } else if (section.type === 'grid' || section.type === 'grid-no-banner') {

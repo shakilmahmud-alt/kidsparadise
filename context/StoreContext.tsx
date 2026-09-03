@@ -190,7 +190,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       if (data.settings?.store_info) {
         setStoreInfo(data.settings.store_info);
       }
-      if (data.settings?.home_sections) {
+      if (data.settings?.home_sections && Array.isArray(data.settings.home_sections) && data.settings.home_sections.length > 0) {
         setHomeSections(data.settings.home_sections);
       }
 
@@ -261,7 +261,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           if (parsed.attributes?.length) setAttributes(parsed.attributes);
           if (parsed.settings?.shipping_fees) setShippingSettings(parsed.settings.shipping_fees);
           if (parsed.settings?.store_info) setStoreInfo(parsed.settings.store_info);
-          if (parsed.settings?.home_sections) setHomeSections(parsed.settings.home_sections);
+          if (parsed.settings?.home_sections && Array.isArray(parsed.settings.home_sections) && parsed.settings.home_sections.length > 0) {
+            setHomeSections(parsed.settings.home_sections);
+          }
         }
       } catch (e) {}
 
