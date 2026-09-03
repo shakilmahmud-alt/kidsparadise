@@ -85,6 +85,7 @@ interface StoreContextType {
   refreshAllData: () => Promise<void>;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
+  restoreCart: () => boolean;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -318,6 +319,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       console.warn("Error triggering invoice emails:", e);
     }
 
+    // Keep cart backup in case online payment is cancelled/failed
+    localStorage.setItem('checkout_cart_backup', JSON.stringify(cart));
+
     setCart([]);
     setAppliedCoupon(null);
     localStorage.removeItem('cart');
@@ -326,9 +330,26 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return mappedOrder;
   };
 
+  const restoreCart = (): boolean => {
+    try {
+      const backup = localStorage.getItem('checkout_cart_backup');
+      if (backup) {
+        const parsed = JSON.parse(backup);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCart(parsed);
+          localStorage.setItem('cart', backup);
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn("Error restoring cart backup:", e);
+    }
+    return false;
+  };
+
   return (
     <StoreContext.Provider value={{
-      products, categories, brands, orders, attributes, coupons, reviews, users, addresses, pages, blogPosts, banners, homeSections, wishlist, user, userProfile, shippingSettings, storeInfo, appliedCoupon, cart, isAdmin, adminTab, isCartOpen, loading,
+      products, categories, brands, orders, attributes, coupons, reviews, users, addresses, pages, blogPosts, banners, homeSections, wishlist, user, userProfile, shippingSettings, storeInfo, appliedCoupon, cart, isAdmin, adminTab, isCartOpen, loading, restoreCart,
       setAdminTab: (tab: AdminTab) => setAdminTab(tab),
       toggleAdmin: () => setIsAdmin(!isAdmin),
       addToCart,
