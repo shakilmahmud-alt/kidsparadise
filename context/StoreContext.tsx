@@ -193,6 +193,16 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       if (data.settings?.home_sections) {
         setHomeSections(data.settings.home_sections);
       }
+
+      try {
+        localStorage.setItem('kp_cached_store', JSON.stringify({
+          products: data.products,
+          categories: data.categories,
+          brands: data.brands,
+          attributes: data.attributes,
+          settings: data.settings
+        }));
+      } catch (e) {}
     } catch (error: any) {
       console.warn('Store data fetch info (MySQL):', error.message);
     }
@@ -236,10 +246,42 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   useEffect(() => {
     const init = async () => {
-      setLoading(true);
-      await fetchData();
-      await fetchUserData();
+      // 1. Instant hydration from cached store data for blazing fast display
+      let hasCache = false;
+      try {
+        const cached = localStorage.getItem('kp_cached_store');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.products?.length) {
+            setProducts(parsed.products);
+            hasCache = true;
+          }
+          if (parsed.categories?.length) setCategories(parsed.categories);
+          if (parsed.brands?.length) setBrands(parsed.brands);
+          if (parsed.attributes?.length) setAttributes(parsed.attributes);
+          if (parsed.settings?.shipping_fees) setShippingSettings(parsed.settings.shipping_fees);
+          if (parsed.settings?.store_info) setStoreInfo(parsed.settings.store_info);
+          if (parsed.settings?.home_sections) setHomeSections(parsed.settings.home_sections);
+        }
+      } catch (e) {}
+
+      // If we already had cached data, dismiss loading screen in 300ms
+      if (hasCache) {
+        setTimeout(() => setLoading(false), 300);
+      }
+
+      // 2. Fetch fresh store data and user data concurrently
+      const storePromise = fetchData();
+      const userPromise = fetchUserData();
+
+      // Cap maximum initial loader wait to 700ms so the user is never kept waiting
+      const maxWait = new Promise(resolve => setTimeout(resolve, hasCache ? 300 : 700));
+
+      await Promise.race([storePromise, maxWait]);
       setLoading(false);
+
+      // Finish background synchronization
+      await Promise.allSettled([storePromise, userPromise]);
     };
     init();
   }, []);

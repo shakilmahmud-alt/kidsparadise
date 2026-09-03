@@ -152,9 +152,14 @@ const OrderSuccess: React.FC = () => {
 
         {/* Final Actions */}
         <div className="space-y-4">
-          <Link to="/" className="block w-full bg-[#F0264C] hover:bg-[#d01c3f] text-white font-black py-5 rounded-2xl text-center transition-all shadow-xl shadow-rose-50 text-sm uppercase tracking-widest active:scale-95">
+          <button
+            onClick={() => {
+              window.location.href = '/';
+            }}
+            className="block w-full bg-[#F0264C] hover:bg-[#d01c3f] text-white font-black py-5 rounded-2xl text-center transition-all shadow-xl shadow-rose-50 text-sm uppercase tracking-widest active:scale-95 cursor-pointer"
+          >
             Back to Shopping
-          </Link>
+          </button>
           <div className="text-center">
             <p className="text-gray-400 text-[11px] font-bold uppercase tracking-widest">
               A confirmation email has been sent to you.

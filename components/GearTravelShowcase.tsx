@@ -192,10 +192,10 @@ export const GearTravelShowcase: React.FC = () => {
         <div className="w-full lg:w-[280px] xl:w-[320px] shrink-0 rounded-2xl overflow-hidden relative shadow-md bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col justify-between p-6 md:p-8 min-h-[340px] lg:min-h-[420px] group/banner">
           {/* Background Image with Dark Vignette */}
           <div 
-            className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover/banner:scale-105 opacity-40 mix-blend-overlay"
-            style={{ backgroundImage: `url('https://ik.imagekit.io/vrtbi4wsn/banners/childcare-banner.jpg')` }}
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover/banner:scale-105 opacity-85"
+            style={{ backgroundImage: `url('/gear-travel-banner.jpg')` }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />
 
           {/* Top Badge */}
           <div className="relative z-10">

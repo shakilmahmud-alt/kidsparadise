@@ -254,15 +254,15 @@ export const Header: React.FC = () => {
             
             {/* Phone / Support Widget (Desktop) */}
             <a 
-              href="tel:+8801797007260"
+              href="tel:+8801726499168"
               className="hidden xl:flex items-center gap-3 text-gray-800 hover:text-[#F0264C] transition-colors group"
             >
               <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-[#F0264C] group-hover:scale-110 transition-transform">
                 <Phone size={20} />
               </div>
               <div className="flex flex-col">
-                <span className="font-extrabold text-sm text-gray-900 tracking-tight">(017) 9700-7260</span>
-                <span className="text-[11px] text-gray-500">Available daily 09:00 to 22:00</span>
+                <span className="font-extrabold text-sm text-gray-900 tracking-tight">+8801726499168</span>
+                <span className="text-[11px] text-gray-500">Available daily 10am to 07pm</span>
               </div>
             </a>
 
