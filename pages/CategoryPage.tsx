@@ -87,7 +87,7 @@ const ProductCardSkeleton: React.FC = () => {
 
 const CategoryPage: React.FC = () => {
   const { categorySlug } = useParams<{ categorySlug: string }>();
-  const { products, frontendProducts, categories, reviews, loading } = useStore();
+  const { products, frontendProducts, categories, reviews, loading, isStoreLoaded } = useStore();
   const sourceProducts = frontendProducts || products;
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -543,11 +543,14 @@ const CategoryPage: React.FC = () => {
     return count;
   }, [selectedAvailability, selectedMinRating, priceRange, minMax, selectedAttributes]);
 
-  if (loading && products.length === 0) {
+  if ((loading || !isStoreLoaded) && (products.length === 0 || categories.length === 0)) {
     return <PageSkeleton type="category" />;
   }
 
   if (!currentCategory) {
+    if (!isStoreLoaded || loading || categories.length === 0) {
+      return <PageSkeleton type="category" />;
+    }
     return (
       <div className="bg-gray-50 min-h-screen py-20 flex items-center justify-center">
         <div className="text-center bg-white p-10 rounded-3xl border border-gray-100 shadow-xl max-w-md w-full mx-4">
@@ -1096,7 +1099,7 @@ const CategoryPage: React.FC = () => {
             </div>
 
             {/* Products Grid */}
-            {loading ? (
+            {loading || !isStoreLoaded || sourceProducts.length === 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
                 {[...Array(8)].map((_, i) => (
                   <ProductCardSkeleton key={i} />

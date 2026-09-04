@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect, useMemo } from 'react';
 import { Product, Category, Order, CartItem, AdminTab, Attribute, Variant, Brand, Coupon, ShippingSettings, Review, UserProfile, Address, StoreInfo, Page, Banner, HomeSection, BlogPost } from '../types';
 import api, { getStoredUser } from '../lib/api';
+import { idbGet, idbSet } from '../lib/idb';
 
 interface StoreContextType {
   products: Product[];
@@ -39,6 +40,7 @@ interface StoreContextType {
   adminTab: AdminTab;
   isCartOpen: boolean;
   loading: boolean;
+  isStoreLoaded: boolean;
   setAdminTab: (tab: AdminTab) => void;
   toggleAdmin: () => void;
   addToCart: (product: Product, variant?: Variant, quantity?: number) => void;
@@ -248,6 +250,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [adminTab, setAdminTab] = useState<AdminTab>('orders');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isStoreLoaded, setIsStoreLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showZeroStockFrontend, setShowZeroStockFrontendState] = useState<boolean>(() => {
     const saved = localStorage.getItem('show_zero_stock_frontend');
@@ -298,17 +301,24 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         localStorage.setItem('show_zero_stock_frontend', String(flag));
       }
 
-      try {
-        localStorage.setItem('kp_cached_store', JSON.stringify({
-          products: data.products ? data.products.map(normalizeProduct) : [],
-          categories: data.categories,
-          brands: data.brands,
-          attributes: data.attributes,
-          settings: data.settings
-        }));
-      } catch (e) {}
+      setIsStoreLoaded(true);
+      setLoading(false);
+
+      // Cache safely into IndexedDB (handles >5MB with zero quota issues)
+      idbSet('kp_cached_store', {
+        products: data.products ? data.products.map(normalizeProduct) : [],
+        categories: data.categories,
+        brands: data.brands,
+        attributes: data.attributes,
+        settings: data.settings,
+        coupons: data.coupons,
+        reviews: data.reviews,
+        pages: data.pages
+      });
     } catch (error: any) {
       console.warn('Store data fetch info (MySQL):', error.message);
+      setIsStoreLoaded(true);
+      setLoading(false);
     }
   };
 
@@ -350,44 +360,43 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   useEffect(() => {
     const init = async () => {
-      // 1. Instant hydration from cached store data for blazing fast display
+      // 1. Instant hydration from cached store data in IndexedDB
       let hasCache = false;
       try {
-        const cached = localStorage.getItem('kp_cached_store');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (parsed.products?.length) {
-            setProducts(parsed.products.map(normalizeProduct));
-            hasCache = true;
-          }
-          if (parsed.categories?.length) setCategories(parsed.categories);
-          if (parsed.brands?.length) setBrands(parsed.brands);
-          if (parsed.attributes?.length) setAttributes(parsed.attributes);
-          if (parsed.settings?.shipping_fees) setShippingSettings(parsed.settings.shipping_fees);
-          if (parsed.settings?.store_info) setStoreInfo(parsed.settings.store_info);
-          if (parsed.settings?.home_sections && Array.isArray(parsed.settings.home_sections) && parsed.settings.home_sections.length > 0) {
-            setHomeSections(parsed.settings.home_sections);
-          }
-          if (parsed.settings?.show_zero_stock_frontend !== undefined) {
-            setShowZeroStockFrontendState(Boolean(parsed.settings.show_zero_stock_frontend));
-          }
+        const cached = await idbGet<any>('kp_cached_store');
+        if (cached && cached.products && cached.products.length > 0) {
+          setProducts(cached.products.map(normalizeProduct));
+          hasCache = true;
+          setIsStoreLoaded(true);
+          setLoading(false);
         }
-      } catch (e) {}
-
-      // If we already had cached data, dismiss loading screen in 300ms
-      if (hasCache) {
-        setTimeout(() => setLoading(false), 300);
+        if (cached?.categories?.length) setCategories(cached.categories);
+        if (cached?.brands?.length) setBrands(cached.brands);
+        if (cached?.attributes?.length) setAttributes(cached.attributes);
+        if (cached?.settings?.shipping_fees) setShippingSettings(cached.settings.shipping_fees);
+        if (cached?.settings?.store_info) setStoreInfo(cached.settings.store_info);
+        if (cached?.settings?.home_sections && Array.isArray(cached.settings.home_sections) && cached.settings.home_sections.length > 0) {
+          setHomeSections(cached.settings.home_sections);
+        }
+        if (cached?.settings?.show_zero_stock_frontend !== undefined) {
+          setShowZeroStockFrontendState(Boolean(cached.settings.show_zero_stock_frontend));
+        }
+      } catch (e) {
+        console.warn('Cache hydration notice:', e);
       }
 
       // 2. Fetch fresh store data and user data concurrently
       const storePromise = fetchData();
       const userPromise = fetchUserData();
 
-      // Cap maximum initial loader wait to 700ms so the user is never kept waiting
-      const maxWait = new Promise(resolve => setTimeout(resolve, hasCache ? 300 : 700));
-
-      await Promise.race([storePromise, maxWait]);
-      setLoading(false);
+      // If no local cache was available, wait for storePromise with a safe 15s fallback
+      // so skeleton stays active and empty states ("No products found") NEVER flash prematurely!
+      if (!hasCache) {
+        const safetyTimeout = new Promise(resolve => setTimeout(resolve, 15000));
+        await Promise.race([storePromise, safetyTimeout]);
+        setIsStoreLoaded(true);
+        setLoading(false);
+      }
 
       // Finish background synchronization
       await Promise.allSettled([storePromise, userPromise]);
@@ -498,7 +507,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   return (
     <StoreContext.Provider value={{
-      products, categories, brands, orders, attributes, coupons, reviews, users, addresses, pages, blogPosts, banners, homeSections, wishlist, user, userProfile, shippingSettings, storeInfo, appliedCoupon, cart, isAdmin, adminTab, isCartOpen, loading, restoreCart,
+      products, categories, brands, orders, attributes, coupons, reviews, users, addresses, pages, blogPosts, banners, homeSections, wishlist, user, userProfile, shippingSettings, storeInfo, appliedCoupon, cart, isAdmin, adminTab, isCartOpen, loading, isStoreLoaded, restoreCart,
       showZeroStockFrontend, setShowZeroStockFrontend, frontendProducts, isProductInStock,
       setAdminTab: (tab: AdminTab) => setAdminTab(tab),
       toggleAdmin: () => setIsAdmin(!isAdmin),

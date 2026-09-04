@@ -20,7 +20,7 @@ interface GearTab {
 }
 
 export const GearTravelShowcase: React.FC = () => {
-  const { products, frontendProducts } = useStore();
+  const { products, frontendProducts, loading, isStoreLoaded } = useStore();
   const sourceProducts = frontendProducts || products;
   const sliderRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -240,14 +240,29 @@ export const GearTravelShowcase: React.FC = () => {
             ref={sliderRef}
             className="flex gap-4 md:gap-5 overflow-x-auto pb-4 pt-1 scrollbar-hide snap-x snap-mandatory scroll-smooth -mx-1 px-1"
           >
-            {filteredProducts.map((product) => (
-              <div 
-                key={`gear-${product.id}`}
-                className="gear-product-card w-[170px] sm:w-[210px] md:w-[230px] lg:w-[250px] shrink-0 snap-start h-full flex"
-              >
-                <ProductCard product={product} className="w-full h-full shadow-xs hover:shadow-lg transition-all" />
-              </div>
-            ))}
+            {loading || !isStoreLoaded || sourceProducts.length === 0 ? (
+              Array.from({ length: 6 }).map((_, idx) => (
+                <div 
+                  key={`gear-skel-${idx}`} 
+                  className="w-[170px] sm:w-[210px] md:w-[230px] lg:w-[250px] shrink-0 h-80 bg-gray-50 border border-gray-100 rounded-3xl p-4 space-y-4 animate-pulse"
+                >
+                  <div className="w-full aspect-square bg-gray-200 rounded-2xl"></div>
+                  <div className="space-y-2">
+                    <div className="h-3.5 bg-gray-200 rounded w-2/3"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              filteredProducts.map((product) => (
+                <div 
+                  key={`gear-${product.id}`}
+                  className="gear-product-card w-[170px] sm:w-[210px] md:w-[230px] lg:w-[250px] shrink-0 snap-start h-full flex"
+                >
+                  <ProductCard product={product} className="w-full h-full shadow-xs hover:shadow-lg transition-all" />
+                </div>
+              ))
+            )}
           </div>
 
           {/* Navigation Right Arrow */}

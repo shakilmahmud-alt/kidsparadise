@@ -107,7 +107,7 @@ const ProductCardSkeleton: React.FC = () => {
 
 const Products: React.FC = () => {
   const navigate = useNavigate();
-  const { products, frontendProducts, categories, searchQuery, brands, reviews, loading } = useStore();
+  const { products, frontendProducts, categories, searchQuery, brands, reviews, loading, isStoreLoaded } = useStore();
   const sourceProducts = frontendProducts || products;
   const [searchParams, setSearchParams] = useSearchParams();
   
@@ -463,7 +463,7 @@ const Products: React.FC = () => {
     }
   };
 
-  if (loading && products.length === 0) {
+  if ((loading || !isStoreLoaded) && products.length === 0) {
     return <PageSkeleton type="products" />;
   }
 
@@ -715,7 +715,7 @@ const Products: React.FC = () => {
             </div>
 
 
-            {loading ? (
+            {loading || !isStoreLoaded || sourceProducts.length === 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
                 {[...Array(8)].map((_, i) => (
                   <ProductCardSkeleton key={i} />

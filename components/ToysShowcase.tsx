@@ -19,7 +19,7 @@ interface ToyTab {
 }
 
 export const ToysShowcase: React.FC = () => {
-  const { products, frontendProducts } = useStore();
+  const { products, frontendProducts, loading, isStoreLoaded } = useStore();
   const sourceProducts = frontendProducts || products;
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -177,11 +177,23 @@ export const ToysShowcase: React.FC = () => {
 
       {/* Product Grid (2 rows of 6 = 12 items on desktop) */}
       <div ref={containerRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
-        {filteredProducts.map((product) => (
-          <div key={`toy-${product.id}`} className="toy-product-card h-full flex">
-            <ProductCard product={product} className="w-full h-full shadow-xs hover:shadow-lg transition-all" />
-          </div>
-        ))}
+        {loading || !isStoreLoaded || sourceProducts.length === 0 ? (
+          Array.from({ length: 12 }).map((_, idx) => (
+            <div key={`toy-skel-${idx}`} className="h-72 bg-gray-50 border border-gray-100 rounded-3xl p-4 space-y-4 animate-pulse">
+              <div className="w-full aspect-square bg-gray-200 rounded-2xl"></div>
+              <div className="space-y-2">
+                <div className="h-3.5 bg-gray-200 rounded w-2/3"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+              </div>
+            </div>
+          ))
+        ) : (
+          filteredProducts.map((product) => (
+            <div key={`toy-${product.id}`} className="toy-product-card h-full flex">
+              <ProductCard product={product} className="w-full h-full shadow-xs hover:shadow-lg transition-all" />
+            </div>
+          ))
+        )}
       </div>
 
       {/* Dynamic "Shop All [sub category]" Button */}
