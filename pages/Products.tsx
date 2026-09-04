@@ -337,12 +337,17 @@ const Products: React.FC = () => {
 
   const filteredProducts = useMemo(() => {
     const showSaleOnly = searchParams.get('filter') === 'sale';
+    const searchParamVal = (searchParams.get('search') || searchParams.get('q') || searchQuery || '').trim().toLowerCase();
 
     return categoryProducts.filter(p => {
-      const searchMatch = !searchQuery ||
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.category.some(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
+      const searchMatch = !searchParamVal ||
+        p.name.toLowerCase().includes(searchParamVal) ||
+        (p.description && p.description.toLowerCase().includes(searchParamVal)) ||
+        (p.brand && p.brand.toLowerCase().includes(searchParamVal)) ||
+        (p.sku && p.sku.toLowerCase().includes(searchParamVal)) ||
+        (Array.isArray(p.category)
+          ? p.category.some(c => c.toLowerCase().includes(searchParamVal))
+          : (p.category && String(p.category).toLowerCase().includes(searchParamVal)));
 
       const brandMatch = selectedBrands.length === 0 || selectedBrands.some(b => {
         const lowerB = b.toLowerCase();

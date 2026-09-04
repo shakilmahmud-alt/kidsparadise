@@ -18,7 +18,8 @@ import {
   Heart, 
   Package, 
   Award,
-  Tag
+  Tag,
+  ShoppingCart
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Category } from '../types';
@@ -81,7 +82,7 @@ const SlideDownButton: React.FC<{
 };
 
 export const HeroSection: React.FC = () => {
-  const { categories, searchQuery, setSearchQuery, products, attributes } = useStore();
+  const { categories, searchQuery, setSearchQuery, products, frontendProducts, attributes, isProductInStock, addToCart } = useStore();
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState<CategoryNode | null>(null);
   const [isHoveringBrands, setIsHoveringBrands] = useState(false);
@@ -225,11 +226,19 @@ export const HeroSection: React.FC = () => {
   }, [isPaused, maxSlide, activeCategory, isHoveringBrands]);
 
   const searchResults = useMemo(() => {
-    if (!searchQuery || searchQuery.length < 2) return [];
-    return products.filter(p =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase())
-    ).slice(0, 6);
-  }, [products, searchQuery]);
+    if (!searchQuery || searchQuery.trim().length < 2) return [];
+    const source = frontendProducts || products;
+    const q = searchQuery.toLowerCase().trim();
+    return source.filter(p => {
+      const nameMatch = p.name?.toLowerCase().includes(q);
+      const skuMatch = p.sku && p.sku.toLowerCase().includes(q);
+      const brandMatch = p.brand && p.brand.toLowerCase().includes(q);
+      const catMatch = Array.isArray(p.category)
+        ? p.category.some((c: string) => c.toLowerCase().includes(q))
+        : (p.category && String(p.category).toLowerCase().includes(q));
+      return Boolean(nameMatch || skuMatch || brandMatch || catMatch);
+    });
+  }, [products, frontendProducts, searchQuery]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -265,6 +274,7 @@ export const HeroSection: React.FC = () => {
                   setShowSearchDropdown(true);
                 }}
                 onFocus={() => setShowSearchDropdown(true)}
+                onBlur={() => setTimeout(() => setShowSearchDropdown(false), 250)}
                 className="w-full px-5 py-3 text-gray-800 text-sm outline-none placeholder-gray-500 bg-transparent"
               />
               <button
@@ -277,39 +287,93 @@ export const HeroSection: React.FC = () => {
             </form>
 
             {/* Live Search Results Dropdown */}
-            {showSearchDropdown && searchResults.length > 0 && (
+            {showSearchDropdown && searchQuery.trim().length >= 2 && (
               <div 
-                className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-md mt-1 border border-gray-200 divide-y divide-gray-100 z-50 overflow-hidden max-h-[380px] overflow-y-auto"
-                onMouseDown={(e) => e.stopPropagation()}
+                className="absolute top-full left-0 w-full bg-white shadow-2xl rounded-xl mt-1.5 border border-gray-200 divide-y divide-gray-100 z-50 overflow-hidden max-h-[440px] overflow-y-auto custom-scrollbar"
+                onMouseDown={(e) => e.preventDefault()}
               >
-                {searchResults.map(product => (
+                <div className="px-4 py-2.5 bg-gray-50/90 flex items-center justify-between text-xs text-gray-500 font-medium">
+                  <span>Found {searchResults.length} {searchResults.length === 1 ? 'product' : 'products'}</span>
+                  {searchResults.length > 0 && (
+                    <button
+                      onClick={handleSearchSubmit}
+                      className="text-[#F0264C] font-bold hover:underline cursor-pointer"
+                    >
+                      View All
+                    </button>
+                  )}
+                </div>
+
+                {searchResults.slice(0, 6).map(product => (
                   <div 
                     key={product.id} 
-                    className="flex items-center gap-4 p-3.5 hover:bg-gray-50 transition-colors cursor-pointer group"
+                    className="flex items-center gap-4 p-3 hover:bg-rose-50/40 transition-colors cursor-pointer group"
                     onClick={() => {
                       setShowSearchDropdown(false);
                       navigate(`/product/${product.slug || product.id}`);
                     }}
                   >
-                    <img 
-                      src={product.images[0] || 'https://via.placeholder.com/80'} 
-                      alt={product.name} 
-                      className="w-12 h-12 object-cover rounded border border-gray-100 flex-shrink-0"
-                    />
+                    <div className="w-12 h-12 bg-white rounded-xl border border-gray-100 p-1 flex items-center justify-center shrink-0">
+                      <img 
+                        src={product.images?.[0] || 'https://via.placeholder.com/80'} 
+                        alt={product.name} 
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-semibold text-gray-800 truncate group-hover:text-[#F0264C] transition-colors">
+                      <h4 className="text-sm font-bold text-gray-800 truncate group-hover:text-[#F0264C] transition-colors leading-tight">
                         {product.name}
                       </h4>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-1">
                         <span className="text-[#F0264C] font-bold text-sm">৳{product.price}</span>
-                        {product.originalPrice && (
+                        {product.originalPrice && product.originalPrice > product.price && (
                           <span className="text-gray-400 text-xs line-through">৳{product.originalPrice}</span>
+                        )}
+                        {isProductInStock(product) ? (
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">In Stock</span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full">Out of Stock</span>
                         )}
                       </div>
                     </div>
-                    <ChevronRight size={16} className="text-gray-300 group-hover:text-[#F0264C] transition-colors" />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToCart(product);
+                      }}
+                      className="p-2 rounded-xl bg-gray-50 text-gray-400 hover:bg-[#F0264C] hover:text-white transition-all shrink-0"
+                      title="Add to Cart"
+                    >
+                      <ShoppingCart size={16} />
+                    </button>
                   </div>
                 ))}
+
+                {searchResults.length === 0 ? (
+                  <div className="py-8 px-4 text-center">
+                    <Search size={28} className="mx-auto text-gray-300 mb-2" />
+                    <p className="text-xs font-bold text-gray-700">No products found for "{searchQuery}"</p>
+                    <p className="text-[11px] text-gray-400 mt-1">Try checking for typos or searching by category</p>
+                    <button
+                      onClick={() => {
+                        navigate('/products');
+                        setShowSearchDropdown(false);
+                      }}
+                      className="mt-3 text-xs font-bold text-[#F0264C] hover:underline cursor-pointer"
+                    >
+                      Browse all products →
+                    </button>
+                  </div>
+                ) : searchResults.length > 6 && (
+                  <div className="p-3 bg-gray-50 text-center">
+                    <button
+                      onClick={handleSearchSubmit}
+                      className="text-xs font-bold text-[#F0264C] hover:underline cursor-pointer"
+                    >
+                      View all {searchResults.length} results for "{searchQuery}" →
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -117,7 +117,7 @@ const MobileCategoryItem: React.FC<{ category: CategoryNode; level: number; onCl
 };
 
 export const Header: React.FC = () => {
-  const { cart, isAdmin, user, signOut, searchQuery, setSearchQuery, openCart, storeInfo, categories, products, frontendProducts, userProfile, wishlist, attributes } = useStore();
+  const { cart, isAdmin, user, signOut, searchQuery, setSearchQuery, openCart, storeInfo, categories, products, frontendProducts, userProfile, wishlist, attributes, isProductInStock, addToCart } = useStore();
   const location = useLocation();
   const navigate = useNavigate();
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -169,11 +169,18 @@ export const Header: React.FC = () => {
   }, [attributes]);
 
   const searchResults = useMemo(() => {
-    if (!searchQuery || searchQuery.length < 2) return [];
+    if (!searchQuery || searchQuery.trim().length < 2) return [];
     const source = frontendProducts || products;
-    return source.filter(p =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase())
-    ).slice(0, 5);
+    const q = searchQuery.toLowerCase().trim();
+    return source.filter(p => {
+      const nameMatch = p.name?.toLowerCase().includes(q);
+      const skuMatch = p.sku && p.sku.toLowerCase().includes(q);
+      const brandMatch = p.brand && p.brand.toLowerCase().includes(q);
+      const catMatch = Array.isArray(p.category)
+        ? p.category.some((c: string) => c.toLowerCase().includes(q))
+        : (p.category && String(p.category).toLowerCase().includes(q));
+      return Boolean(nameMatch || skuMatch || brandMatch || catMatch);
+    });
   }, [products, frontendProducts, searchQuery]);
 
   // Sync search query with URL and close menus
@@ -249,6 +256,130 @@ export const Header: React.FC = () => {
               />
             </Link>
           </div>
+
+          {/* Desktop Search Bar (Visible on all pages except Homepage where HeroSection has its search bar) */}
+          {location.pathname !== '/' && (
+            <div className="hidden md:flex flex-1 max-w-xl mx-4 lg:mx-8 relative">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSearch();
+                }}
+                className="flex w-full bg-gray-100 rounded-full border border-gray-200 overflow-hidden focus-within:border-gray-400 focus-within:bg-white transition-all"
+              >
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowResults(true);
+                  }}
+                  onFocus={() => setShowResults(true)}
+                  onBlur={() => setTimeout(() => setShowResults(false), 250)}
+                  className="w-full px-5 py-2.5 text-sm text-gray-700 bg-transparent outline-none"
+                />
+                <button
+                  type="submit"
+                  className="px-4 text-gray-500 hover:text-[#F0264C] transition-colors cursor-pointer"
+                  title="Search"
+                >
+                  <Search size={18} />
+                </button>
+              </form>
+
+              {/* Live Search Results Dropdown */}
+              {showResults && searchQuery.trim().length >= 2 && (
+                <div
+                  className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 divide-y divide-gray-100 z-[200] overflow-hidden max-h-[440px] overflow-y-auto custom-scrollbar"
+                  onMouseDown={(e) => e.preventDefault()}
+                >
+                  <div className="px-4 py-2.5 bg-gray-50/90 flex items-center justify-between text-xs text-gray-500 font-medium">
+                    <span>Found {searchResults.length} {searchResults.length === 1 ? 'product' : 'products'}</span>
+                    {searchResults.length > 0 && (
+                      <button
+                        onClick={handleSearch}
+                        className="text-[#F0264C] font-bold hover:underline cursor-pointer"
+                      >
+                        View All
+                      </button>
+                    )}
+                  </div>
+
+                  {searchResults.slice(0, 6).map(product => (
+                    <div
+                      key={`main-search-${product.id}`}
+                      className="flex items-center gap-3.5 p-3 hover:bg-rose-50/40 transition-colors cursor-pointer group"
+                      onClick={() => {
+                        setShowResults(false);
+                        navigate(`/product/${product.slug || product.id}`);
+                      }}
+                    >
+                      <div className="w-12 h-12 bg-white rounded-xl border border-gray-100 p-1 flex items-center justify-center shrink-0">
+                        <img
+                          src={product.images?.[0] || 'https://via.placeholder.com/80'}
+                          alt={product.name}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-bold text-gray-800 truncate group-hover:text-[#F0264C] transition-colors leading-tight">
+                          {product.name}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs font-black text-[#F0264C]">৳{product.price}</span>
+                          {product.originalPrice && product.originalPrice > product.price && (
+                            <span className="text-[11px] text-gray-400 line-through">৳{product.originalPrice}</span>
+                          )}
+                          {isProductInStock(product) ? (
+                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">In Stock</span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full">Out of Stock</span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToCart(product);
+                        }}
+                        className="p-2 rounded-xl bg-gray-50 text-gray-400 hover:bg-[#F0264C] hover:text-white transition-all shrink-0"
+                        title="Add to Cart"
+                      >
+                        <ShoppingCart size={16} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {searchResults.length === 0 ? (
+                    <div className="py-8 px-4 text-center">
+                      <Search size={28} className="mx-auto text-gray-300 mb-2" />
+                      <p className="text-xs font-bold text-gray-700">No products found for "{searchQuery}"</p>
+                      <p className="text-[11px] text-gray-400 mt-1">Try checking for typos or searching by category</p>
+                      <button
+                        onClick={() => {
+                          navigate('/products');
+                          setShowResults(false);
+                        }}
+                        className="mt-3 text-xs font-bold text-[#F0264C] hover:underline cursor-pointer"
+                      >
+                        Browse all products →
+                      </button>
+                    </div>
+                  ) : searchResults.length > 6 && (
+                    <div className="p-3 bg-gray-50 text-center">
+                      <button
+                        onClick={handleSearch}
+                        className="text-xs font-bold text-[#F0264C] hover:underline cursor-pointer"
+                      >
+                        View all {searchResults.length} results for "{searchQuery}" →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Right: Actions (Phone Inquiry | Sign In | Compare | Wishlist | Cart) */}
           <div className="flex items-center gap-6 lg:gap-8">
@@ -567,7 +698,13 @@ export const Header: React.FC = () => {
 
           {/* Compact Sticky Search */}
           <div className="flex-1 max-w-xl mx-4 relative">
-            <div className="flex w-full bg-gray-100 rounded-full border border-gray-200 overflow-hidden">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSearch();
+              }}
+              className="flex w-full bg-gray-100 rounded-full border border-gray-200 overflow-hidden focus-within:border-gray-400 focus-within:bg-white transition-all"
+            >
               <input
                 type="text"
                 placeholder="Search products..."
@@ -577,13 +714,108 @@ export const Header: React.FC = () => {
                   setShowResults(true);
                 }}
                 onFocus={() => setShowResults(true)}
-                onBlur={() => setTimeout(() => setShowResults(false), 200)}
+                onBlur={() => setTimeout(() => setShowResults(false), 250)}
                 className="w-full px-4 py-1.5 text-xs text-gray-700 bg-transparent outline-none"
               />
-              <button onClick={handleSearch} className="px-3 text-gray-500 hover:text-[#F0264C]">
+              <button
+                type="submit"
+                className="px-3 text-gray-500 hover:text-[#F0264C] transition-colors cursor-pointer"
+                title="Search"
+              >
                 <Search size={15} />
               </button>
-            </div>
+            </form>
+
+            {/* Live Search Results Dropdown (Sticky Header) */}
+            {showResults && searchQuery.trim().length >= 2 && (
+              <div
+                className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 divide-y divide-gray-100 z-[200] overflow-hidden max-h-[440px] overflow-y-auto custom-scrollbar"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <div className="px-4 py-2.5 bg-gray-50/90 flex items-center justify-between text-xs text-gray-500 font-medium">
+                  <span>Found {searchResults.length} {searchResults.length === 1 ? 'product' : 'products'}</span>
+                  {searchResults.length > 0 && (
+                    <button
+                      onClick={handleSearch}
+                      className="text-[#F0264C] font-bold hover:underline cursor-pointer"
+                    >
+                      View All
+                    </button>
+                  )}
+                </div>
+
+                {searchResults.slice(0, 6).map(product => (
+                  <div
+                    key={`sticky-search-${product.id}`}
+                    className="flex items-center gap-3.5 p-3 hover:bg-rose-50/40 transition-colors cursor-pointer group"
+                    onClick={() => {
+                      setShowResults(false);
+                      navigate(`/product/${product.slug || product.id}`);
+                    }}
+                  >
+                    <div className="w-12 h-12 bg-white rounded-xl border border-gray-100 p-1 flex items-center justify-center shrink-0">
+                      <img
+                        src={product.images?.[0] || 'https://via.placeholder.com/80'}
+                        alt={product.name}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs md:text-sm font-bold text-gray-800 truncate group-hover:text-[#F0264C] transition-colors leading-tight">
+                        {product.name}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-black text-[#F0264C]">৳{product.price}</span>
+                        {product.originalPrice && product.originalPrice > product.price && (
+                          <span className="text-[11px] text-gray-400 line-through">৳{product.originalPrice}</span>
+                        )}
+                        {isProductInStock(product) ? (
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">In Stock</span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full">Out of Stock</span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToCart(product);
+                      }}
+                      className="p-2 rounded-xl bg-gray-50 text-gray-400 hover:bg-[#F0264C] hover:text-white transition-all shrink-0"
+                      title="Add to Cart"
+                    >
+                      <ShoppingCart size={15} />
+                    </button>
+                  </div>
+                ))}
+
+                {searchResults.length === 0 ? (
+                  <div className="py-8 px-4 text-center">
+                    <Search size={28} className="mx-auto text-gray-300 mb-2" />
+                    <p className="text-xs font-bold text-gray-700">No products found for "{searchQuery}"</p>
+                    <p className="text-[11px] text-gray-400 mt-1">Try checking for typos or searching by category</p>
+                    <button
+                      onClick={() => {
+                        navigate('/products');
+                        setShowResults(false);
+                      }}
+                      className="mt-3 text-xs font-bold text-[#F0264C] hover:underline cursor-pointer"
+                    >
+                      Browse all products →
+                    </button>
+                  </div>
+                ) : searchResults.length > 6 && (
+                  <div className="p-3 bg-gray-50 text-center">
+                    <button
+                      onClick={handleSearch}
+                      className="text-xs font-bold text-[#F0264C] hover:underline cursor-pointer"
+                    >
+                      View all {searchResults.length} results for "{searchQuery}" →
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
