@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Category } from '../types';
+import { filterAndRankProducts } from '../lib/search';
+import { slugify } from '../lib/category';
 
 interface CategoryNode extends Category {
   children: CategoryNode[];
@@ -228,16 +230,7 @@ export const HeroSection: React.FC = () => {
   const searchResults = useMemo(() => {
     if (!searchQuery || searchQuery.trim().length < 2) return [];
     const source = frontendProducts || products;
-    const q = searchQuery.toLowerCase().trim();
-    return source.filter(p => {
-      const nameMatch = p.name?.toLowerCase().includes(q);
-      const skuMatch = p.sku && p.sku.toLowerCase().includes(q);
-      const brandMatch = p.brand && p.brand.toLowerCase().includes(q);
-      const catMatch = Array.isArray(p.category)
-        ? p.category.some((c: string) => c.toLowerCase().includes(q))
-        : (p.category && String(p.category).toLowerCase().includes(q));
-      return Boolean(nameMatch || skuMatch || brandMatch || catMatch);
-    });
+    return filterAndRankProducts(source, searchQuery);
   }, [products, frontendProducts, searchQuery]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -404,7 +397,7 @@ export const HeroSection: React.FC = () => {
                     }}
                   >
                     <Link
-                      to={`/category/${cat.slug || encodeURIComponent(cat.name)}`}
+                      to={`/category/${cat.slug || slugify(cat.name)}`}
                       className={`flex items-center justify-between px-4 py-2.5 text-[13.5px] transition-colors ${
                         isHovered 
                           ? 'text-[#0072CE] font-bold bg-blue-50/60' 
@@ -513,7 +506,7 @@ export const HeroSection: React.FC = () => {
                   </div>
 
                   <Link 
-                    to={`/category/${activeCategory.slug || encodeURIComponent(activeCategory.name)}`}
+                    to={`/category/${activeCategory.slug || slugify(activeCategory.name)}`}
                     className="px-5 py-2 rounded-lg bg-rose-50 hover:bg-[#F0264C] text-[#F0264C] hover:text-white font-bold text-xs transition-all flex items-center gap-2 shadow-sm"
                     onClick={() => setActiveCategory(null)}
                   >
@@ -531,7 +524,7 @@ export const HeroSection: React.FC = () => {
                     {activeCategory.children.map(subCat => (
                       <div key={subCat.id} className="space-y-2.5">
                         <Link
-                          to={`/category/${subCat.slug || encodeURIComponent(subCat.name)}`}
+                          to={`/category/${subCat.slug || slugify(subCat.name)}`}
                           className="font-bold text-[14.5px] text-[#1d293f] hover:text-[#0072CE] transition-colors flex items-center justify-between border-b border-gray-100 pb-1.5 group/sub"
                           onClick={() => setActiveCategory(null)}
                         >
@@ -548,7 +541,7 @@ export const HeroSection: React.FC = () => {
                             {subCat.children.map(subSubCat => (
                               <li key={subSubCat.id}>
                                 <Link
-                                  to={`/category/${subSubCat.slug || encodeURIComponent(subSubCat.name)}`}
+                                  to={`/category/${subSubCat.slug || slugify(subSubCat.name)}`}
                                   className="text-xs text-gray-600 hover:text-[#0072CE] transition-colors flex items-center gap-2 hover:translate-x-1 duration-150 py-0.5"
                                   onClick={() => setActiveCategory(null)}
                                 >

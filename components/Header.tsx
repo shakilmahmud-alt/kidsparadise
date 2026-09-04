@@ -30,6 +30,8 @@ import {
 import { useStore } from '../context/StoreContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Category } from '../types';
+import { filterAndRankProducts } from '../lib/search';
+import { slugify } from '../lib/category';
 
 interface CategoryNode extends Category {
   children: CategoryNode[];
@@ -91,7 +93,7 @@ const MobileCategoryItem: React.FC<{ category: CategoryNode; level: number; onCl
           </div>
         ) : (
           <Link
-            to={`/category/${category.slug || encodeURIComponent(category.name)}`}
+            to={`/category/${category.slug || slugify(category.name)}`}
             className="flex items-center w-full text-sm"
             onClick={onClose}
           >
@@ -171,16 +173,7 @@ export const Header: React.FC = () => {
   const searchResults = useMemo(() => {
     if (!searchQuery || searchQuery.trim().length < 2) return [];
     const source = frontendProducts || products;
-    const q = searchQuery.toLowerCase().trim();
-    return source.filter(p => {
-      const nameMatch = p.name?.toLowerCase().includes(q);
-      const skuMatch = p.sku && p.sku.toLowerCase().includes(q);
-      const brandMatch = p.brand && p.brand.toLowerCase().includes(q);
-      const catMatch = Array.isArray(p.category)
-        ? p.category.some((c: string) => c.toLowerCase().includes(q))
-        : (p.category && String(p.category).toLowerCase().includes(q));
-      return Boolean(nameMatch || skuMatch || brandMatch || catMatch);
-    });
+    return filterAndRankProducts(source, searchQuery);
   }, [products, frontendProducts, searchQuery]);
 
   // Sync search query with URL and close menus
@@ -540,7 +533,7 @@ export const Header: React.FC = () => {
                           }}
                         >
                           <Link
-                            to={`/category/${cat.slug || encodeURIComponent(cat.name)}`}
+                            to={`/category/${cat.slug || slugify(cat.name)}`}
                             onClick={() => setIsStickyMenuOpen(false)}
                             className={`flex items-center justify-between px-4 py-2.5 text-[13.5px] transition-colors ${
                               isHovered 
@@ -640,7 +633,7 @@ export const Header: React.FC = () => {
                           {activeStickyCategory.name.replace(/&amp;/g, '&')}
                         </h4>
                         <Link
-                          to={`/category/${activeStickyCategory.slug || encodeURIComponent(activeStickyCategory.name)}`}
+                          to={`/category/${activeStickyCategory.slug || slugify(activeStickyCategory.name)}`}
                           onClick={() => setIsStickyMenuOpen(false)}
                           className="text-xs font-bold text-[#F0264C] hover:underline"
                         >
@@ -652,7 +645,7 @@ export const Header: React.FC = () => {
                         {activeStickyCategory.children.map((child: any) => (
                           <Link
                             key={child.id}
-                            to={`/category/${child.slug || encodeURIComponent(child.name)}`}
+                            to={`/category/${child.slug || slugify(child.name)}`}
                             onClick={() => setIsStickyMenuOpen(false)}
                             className="text-xs text-gray-700 hover:text-[#0072CE] hover:font-bold py-1.5 px-2 rounded-lg hover:bg-blue-50/50 transition-all truncate block"
                           >

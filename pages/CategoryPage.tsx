@@ -18,6 +18,7 @@ import {
   Plus
 } from 'lucide-react';
 import { Category } from '../types';
+import { findCategoryBySlugOrName, getCategoryFamily, isProductInCategory, slugify } from '../lib/category';
 
 interface CategoryNode extends Category {
   children: CategoryNode[];
@@ -122,20 +123,7 @@ const CategoryPage: React.FC = () => {
   // Find current category
   const currentCategory = useMemo(() => {
     if (!categorySlug) return null;
-    const cleanSlug = decodeURIComponent(categorySlug).toLowerCase().trim().replace(/&amp;/g, '&');
-    return categories.find(c => {
-      const cSlug = (c.slug || '').toLowerCase().trim();
-      const cName = c.name.toLowerCase().trim().replace(/&amp;/g, '&');
-      return (
-        cSlug === cleanSlug || 
-        cName === cleanSlug ||
-        encodeURIComponent(c.name).toLowerCase() === cleanSlug ||
-        (cleanSlug === 'gear-travel' && (cSlug === 'gear-travel' || cName === 'gear & travel')) ||
-        (cleanSlug === 'baby-stationery' && (cSlug === 'baby-stationery' || cName === 'stationery')) ||
-        (cleanSlug === 'stationery' && (cSlug === 'baby-stationery' || cName === 'stationery')) ||
-        (cleanSlug === 'baby-care-hygiene' && (cSlug === 'baby-care-hygiene' || cName === 'care & hygiene'))
-      );
-    });
+    return findCategoryBySlugOrName(categories, categorySlug);
   }, [categorySlug, categories]);
 
   // Set page title for SEO
@@ -172,48 +160,20 @@ const CategoryPage: React.FC = () => {
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   // Helper to find all descendants of the current category (to include child category products)
-  const descendantCategories = useMemo(() => {
-    if (!currentCategory) return [];
-
-    const getDescendants = (catId: string): Category[] => {
-      let result: Category[] = [];
-      const children = categories.filter(c => c.parentId == catId);
-      children.forEach(child => {
-        result.push(child);
-        result = [...result, ...getDescendants(child.id)];
-      });
-      return result;
-    };
-
-    return [currentCategory, ...getDescendants(currentCategory.id)];
+  const categoryFamily = useMemo(() => {
+    if (!currentCategory) return null;
+    return getCategoryFamily(categories, currentCategory);
   }, [currentCategory, categories]);
+
+  const descendantCategories = useMemo(() => {
+    return categoryFamily ? categoryFamily.allCategories : [];
+  }, [categoryFamily]);
 
   // Filter products that belong to the active category family
   const categoryProducts = useMemo(() => {
-    if (!currentCategory) return [];
-
-    const targetNames = new Set(
-      descendantCategories.flatMap(c => {
-        const n = c.name.replace(/&amp;/g, '&').toLowerCase().trim();
-        const s = (c.slug || '').toLowerCase().trim();
-        const list = [n, s];
-        if (n === 'stationery' || s === 'baby-stationery') list.push('baby stationery', 'stationery');
-        if (n === 'care & hygiene' || s === 'baby-care-hygiene') list.push('baby care & hygiene', 'care & hygiene', 'baby care and hygiene');
-        if (n === 'gear & travel' || s === 'gear-travel') list.push('gear & travel', 'gear &amp; travel', 'gear and travel');
-        if (n === 'furniture & bedding' || s === 'furniture-bedding') list.push('furniture & bedding', 'furniture &amp; bedding', 'furniture and bedding');
-        if (n === 'apparels' || s === 'apparels') list.push("boy's fashion", "girl's fashion", "baby's fashion", 'apparels');
-        return list;
-      })
-    );
-
-    return sourceProducts.filter(p => {
-      const prodCats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
-      return prodCats.some(cat => {
-        const cleanCat = String(cat).replace(/&amp;/g, '&').toLowerCase().trim();
-        return targetNames.has(cleanCat);
-      });
-    });
-  }, [sourceProducts, descendantCategories, currentCategory]);
+    if (!currentCategory || !categoryFamily) return [];
+    return sourceProducts.filter(p => isProductInCategory(p, categoryFamily, currentCategory));
+  }, [sourceProducts, categoryFamily, currentCategory]);
 
   // Initialize price range based on current category products and URL
   useEffect(() => {
@@ -351,18 +311,11 @@ const CategoryPage: React.FC = () => {
   const subcategoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     subcategoryTree.forEach(sub => {
-      const cleanSubName = sub.name.replace(/&amp;/g, '&').toLowerCase().trim();
-      const cleanSubSlug = (sub.slug || '').toLowerCase().trim();
-      counts[sub.id] = categoryProducts.filter(p => {
-        const prodCats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
-        return prodCats.some(cat => {
-          const c = String(cat).replace(/&amp;/g, '&').toLowerCase().trim();
-          return c === cleanSubName || c === cleanSubSlug;
-        });
-      }).length;
+      const family = getCategoryFamily(categories, sub);
+      counts[sub.id] = sourceProducts.filter(p => isProductInCategory(p, family, sub)).length;
     });
     return counts;
-  }, [subcategoryTree, categoryProducts]);
+  }, [subcategoryTree, categories, sourceProducts]);
 
   // Attribute option count helper
   const getAttributeCount = useCallback((attrName: string, value: string): number => {
@@ -687,7 +640,7 @@ const CategoryPage: React.FC = () => {
                   return (
                     <Link
                       key={sub.id}
-                      to={`/category/${sub.slug || encodeURIComponent(sub.name)}`}
+                      to={`/category/${sub.slug || slugify(sub.name)}`}
                       onClick={() => isMobile && setIsFilterOpen(false)}
                       className="flex items-center justify-between cursor-pointer select-none group py-1 px-1 rounded hover:bg-gray-50 transition-colors"
                     >
@@ -970,7 +923,7 @@ const CategoryPage: React.FC = () => {
                   {idx === breadcrumbs.length - 1 ? (
                     <span className="text-[#F0264C] font-bold">{crumb.name.replace(/&amp;/g, '&')}</span>
                   ) : (
-                    <Link to={`/category/${crumb.slug || encodeURIComponent(crumb.name)}`} className="hover:text-[#F0264C] transition-colors">
+                    <Link to={`/category/${crumb.slug || slugify(crumb.name)}`} className="hover:text-[#F0264C] transition-colors">
                       {crumb.name.replace(/&amp;/g, '&')}
                     </Link>
                   )}

@@ -6,6 +6,8 @@ import ProductCard from '../components/ProductCard';
 import PageSkeleton from '../components/PageSkeleton';
 import { Filter, SlidersHorizontal, ChevronRight, ChevronDown, Search, RotateCcw, Check, Star, Coins, X } from 'lucide-react';
 import { Category } from '../types';
+import { scoreProductSearch } from '../lib/search';
+import { findCategoryBySlugOrName, getCategoryFamily, isProductInCategory, cleanCategoryString, slugify } from '../lib/category';
 import gsap from 'gsap';
 import { Flip } from 'gsap/Flip';
 
@@ -117,8 +119,8 @@ const Products: React.FC = () => {
   
   const observerRef = useRef<IntersectionObserver | null>(null);
   
-  const currentOrderBy = searchParams.get('orderby') || 'price';
   const selectedCategory = searchParams.get('category') || 'All';
+  const currentOrderBy = searchParams.get('orderby') || (searchParams.get('search') ? 'relevance' : 'default');
 
   // Derived state from URL
   const selectedBrands = useMemo(() => {
@@ -157,27 +159,15 @@ const Products: React.FC = () => {
   const selectedCategoryFamily = useMemo(() => {
     if (selectedCategory === 'All') return [];
 
-    const getDescendantNames = (catName: string): string[] => {
-      const currentCat = categories.find(c => c.name === catName);
-      if (!currentCat) return [catName];
+    const targetCat = findCategoryBySlugOrName(categories, selectedCategory);
+    if (!targetCat) return [selectedCategory];
 
-      let names = [catName];
-      const directChildren = categories.filter(c => c.parentId === currentCat.id); // Loose equality handled by string/null checks in StoreContext but verifying logic consistency
-
-      directChildren.forEach(child => {
-        names = [...names, ...getDescendantNames(child.name)];
-      });
-
-      return names;
-    };
-
-    // Also find ancestors to keep them expanded
-    const family = getDescendantNames(selectedCategory);
+    const family = getCategoryFamily(categories, targetCat).allCategories.map(c => c.name);
 
     // Add ancestors
-    let curr = categories.find(c => c.name === selectedCategory);
+    let curr: Category | undefined = targetCat;
     while (curr && curr.parentId) {
-      const parent = categories.find(c => c.id === curr!.parentId);
+      const parent = categories.find(c => String(c.id) === String(curr!.parentId));
       if (parent) {
         family.push(parent.name);
         curr = parent;
@@ -195,38 +185,17 @@ const Products: React.FC = () => {
   const categoryProducts = useMemo(() => {
     if (selectedCategory === 'All') return sourceProducts;
 
-    const getDescendantsOnly = (catName: string): string[] => {
-      const cleanName = catName.replace(/&amp;/g, '&').toLowerCase().trim();
-      const currentCat = categories.find(c => {
-        const cName = c.name.replace(/&amp;/g, '&').toLowerCase().trim();
-        const cSlug = (c.slug || '').toLowerCase().trim();
-        return cName === cleanName || cSlug === cleanName;
+    const targetCat = findCategoryBySlugOrName(categories, selectedCategory);
+    if (!targetCat) {
+      const clean = cleanCategoryString(selectedCategory);
+      return sourceProducts.filter(p => {
+        const cats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
+        return cats.some(c => cleanCategoryString(String(c)) === clean);
       });
-      if (!currentCat) return [cleanName];
+    }
 
-      let names = [currentCat.name.replace(/&amp;/g, '&').toLowerCase().trim(), (currentCat.slug || '').toLowerCase().trim()];
-      categories.filter(c => c.parentId === currentCat.id).forEach(child => {
-        names = [...names, ...getDescendantsOnly(child.name)];
-      });
-      return names;
-    };
-
-    const targetNames = new Set(
-      getDescendantsOnly(selectedCategory).flatMap(n => {
-        const list = [n];
-        if (n === 'stationery' || n === 'baby-stationery') list.push('baby stationery', 'stationery');
-        if (n === 'care & hygiene' || n === 'baby-care-hygiene') list.push('baby care & hygiene', 'care & hygiene', 'baby care and hygiene');
-        if (n === 'gear & travel' || n === 'gear-travel') list.push('gear & travel', 'gear &amp; travel', 'gear and travel');
-        if (n === 'furniture & bedding' || n === 'furniture-bedding') list.push('furniture & bedding', 'furniture &amp; bedding', 'furniture and bedding');
-        if (n === 'apparels') list.push("boy's fashion", "girl's fashion", "baby's fashion", 'apparels');
-        return list;
-      })
-    );
-
-    return sourceProducts.filter(p => {
-      const prodCats = Array.isArray(p.category) ? p.category : [p.category].filter(Boolean);
-      return prodCats.some(c => targetNames.has(String(c).replace(/&amp;/g, '&').toLowerCase().trim()));
-    });
+    const family = getCategoryFamily(categories, targetCat);
+    return sourceProducts.filter(p => isProductInCategory(p, family, targetCat));
   }, [sourceProducts, categories, selectedCategory]);
 
   // Price Range Logic
@@ -335,19 +304,26 @@ const Products: React.FC = () => {
     setIsFilterOpen(false);
   };
 
+  const searchParamVal = (searchParams.get('search') || searchParams.get('q') || searchQuery || '').trim();
+
+  // Compute word-sensitive search scores for all products in category
+  const searchScoreMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!searchParamVal) return map;
+    for (const p of categoryProducts) {
+      const res = scoreProductSearch(p, searchParamVal);
+      if (res.matches) {
+        map.set(p.id, res.score);
+      }
+    }
+    return map;
+  }, [categoryProducts, searchParamVal]);
+
   const filteredProducts = useMemo(() => {
     const showSaleOnly = searchParams.get('filter') === 'sale';
-    const searchParamVal = (searchParams.get('search') || searchParams.get('q') || searchQuery || '').trim().toLowerCase();
 
     return categoryProducts.filter(p => {
-      const searchMatch = !searchParamVal ||
-        p.name.toLowerCase().includes(searchParamVal) ||
-        (p.description && p.description.toLowerCase().includes(searchParamVal)) ||
-        (p.brand && p.brand.toLowerCase().includes(searchParamVal)) ||
-        (p.sku && p.sku.toLowerCase().includes(searchParamVal)) ||
-        (Array.isArray(p.category)
-          ? p.category.some(c => c.toLowerCase().includes(searchParamVal))
-          : (p.category && String(p.category).toLowerCase().includes(searchParamVal)));
+      const searchMatch = !searchParamVal || searchScoreMap.has(p.id);
 
       const brandMatch = selectedBrands.length === 0 || selectedBrands.some(b => {
         const lowerB = b.toLowerCase();
@@ -388,12 +364,22 @@ const Products: React.FC = () => {
 
       return searchMatch && brandMatch && ratingMatch && saleMatch && attributeMatch && priceMatch;
     });
-  }, [categoryProducts, searchQuery, selectedBrands, selectedMinRating, reviews, selectedAttributes, priceRange]);
+  }, [categoryProducts, searchParamVal, searchScoreMap, selectedBrands, selectedMinRating, reviews, selectedAttributes, priceRange]);
 
   const sortedProducts = useMemo(() => {
+    const order = currentOrderBy || 'default';
+
+    // If there is an active search query and sorting by default/relevance, sort by relevance score descending
+    if (searchParamVal && (order === 'default' || order === 'relevance')) {
+      return [...filteredProducts].sort((a, b) => {
+        const scoreA = searchScoreMap.get(a.id) || 0;
+        const scoreB = searchScoreMap.get(b.id) || 0;
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        return (Number(a.price) || 0) - (Number(b.price) || 0);
+      });
+    }
+
     const sorted = [...filteredProducts].sort((a, b) => {
-      const order = currentOrderBy || 'price';
-      
       const priceA = typeof a.price === 'number' ? a.price : Number(a.price) || 0;
       const priceB = typeof b.price === 'number' ? b.price : Number(b.price) || 0;
       const pA = isNaN(priceA) ? 0 : priceA;
@@ -416,7 +402,7 @@ const Products: React.FC = () => {
     });
     
     return sorted;
-  }, [filteredProducts, currentOrderBy, reviews]);
+  }, [filteredProducts, currentOrderBy, reviews, searchParamVal, searchScoreMap]);
 
   useEffect(() => {
     setVisibleCount(12);
@@ -504,7 +490,7 @@ const Products: React.FC = () => {
                       onSelect={(catName) => {
                          const clickedCat = categories.find(c => c.name === catName);
                          if (clickedCat) {
-                           navigate(`/category/${clickedCat.slug || encodeURIComponent(clickedCat.name)}`);
+                           navigate(`/category/${clickedCat.slug || slugify(clickedCat.name)}`);
                          }
                       }}
                       selectedCategoryFamily={selectedCategoryFamily}
@@ -675,6 +661,7 @@ const Products: React.FC = () => {
                     }}
                     className="bg-gray-50 border border-gray-100 rounded-lg px-2 py-1 md:px-3 md:py-1.5 font-bold text-gray-700 outline-none focus:border-rose-500 text-xs md:text-sm"
                   >
+                    {searchParamVal && <option value="relevance">Relevance</option>}
                     <option value="default">Default Sorting</option>
                     <option value="price">Price: Low to High</option>
                     <option value="price-desc">Price: High to Low</option>
@@ -810,12 +797,12 @@ const Products: React.FC = () => {
                     key={cat.id}
                     category={cat}
                     selectedCategory={selectedCategory}
-                    onSelect={(catName) => {
-                       const clickedCat = categories.find(c => c.name === catName);
-                       if (clickedCat) {
-                         navigate(`/category/${clickedCat.slug || encodeURIComponent(clickedCat.name)}`);
-                       }
-                    }}
+                     onSelect={(catName) => {
+                        const clickedCat = categories.find(c => c.name === catName);
+                        if (clickedCat) {
+                          navigate(`/category/${clickedCat.slug || slugify(clickedCat.name)}`);
+                        }
+                     }}
                     selectedCategoryFamily={selectedCategoryFamily}
                   />
                 ))}
