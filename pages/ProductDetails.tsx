@@ -30,7 +30,7 @@ const ProductDetails: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedAttrValues, setSelectedAttrValues] = useState<Record<string, string>>({});
   const [selectionError, setSelectionError] = useState<string | null>(null);
-  const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const [activeImageUrl, setActiveImageUrl] = useState<string>('');
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'description' | 'reviews' | 'shipping'>('description');
   const [shareCopied, setShareCopied] = useState(false);
@@ -93,6 +93,92 @@ const ProductDetails: React.FC = () => {
     ) || null;
   }, [selectedAttrValues, product]);
 
+  // Collect all unique gallery images (primary product images + all variant images)
+  const allGalleryImages = useMemo<{ url: string; variant?: Variant; label?: string }[]>(() => {
+    if (!product) return [];
+
+    const items: { url: string; variant?: Variant; label?: string }[] = [];
+    const seenUrls = new Set<string>();
+
+    // 1. Primary product images
+    if (product.images && Array.isArray(product.images)) {
+      product.images.forEach((img, idx) => {
+        const cleanUrl = img?.trim();
+        if (cleanUrl && !seenUrls.has(cleanUrl)) {
+          seenUrls.add(cleanUrl);
+          items.push({
+            url: cleanUrl,
+            label: `Image ${idx + 1}`
+          });
+        }
+      });
+    }
+
+    // 2. Variant images
+    if (product.variants && Array.isArray(product.variants)) {
+      product.variants.forEach(v => {
+        const cleanUrl = v.image?.trim();
+        if (cleanUrl && !seenUrls.has(cleanUrl)) {
+          seenUrls.add(cleanUrl);
+          const attrLabel = v.attributeValues ? Object.values(v.attributeValues).join(', ') : '';
+          items.push({
+            url: cleanUrl,
+            variant: v,
+            label: attrLabel || 'Variant'
+          });
+        }
+      });
+    }
+
+    // Fallback placeholder if no image exists
+    if (items.length === 0) {
+      items.push({
+        url: 'https://placehold.co/600x600?text=No+Image',
+        label: 'Default'
+      });
+    }
+
+    return items;
+  }, [product]);
+
+  // Synchronize activeImageUrl with product or selected variant
+  useEffect(() => {
+    if (currentVariant?.image) {
+      setActiveImageUrl(currentVariant.image);
+    } else if (allGalleryImages.length > 0) {
+      setActiveImageUrl(prev => {
+        if (prev && allGalleryImages.some(img => img.url === prev)) return prev;
+        return allGalleryImages[0].url;
+      });
+    }
+  }, [product?.id, currentVariant?.id, currentVariant?.image, allGalleryImages]);
+
+  const activeImageIndex = useMemo(() => {
+    const idx = allGalleryImages.findIndex(img => img.url === activeImageUrl);
+    return idx >= 0 ? idx : 0;
+  }, [allGalleryImages, activeImageUrl]);
+
+  const handleSelectThumbnail = (item: { url: string; variant?: Variant; label?: string }) => {
+    setActiveImageUrl(item.url);
+    if (item.variant && item.variant.attributeValues) {
+      setSelectedAttrValues(prev => ({
+        ...prev,
+        ...item.variant!.attributeValues
+      }));
+      setSelectionError(null);
+    }
+  };
+
+  const handlePrevImage = () => {
+    const prevIdx = activeImageIndex === 0 ? allGalleryImages.length - 1 : activeImageIndex - 1;
+    handleSelectThumbnail(allGalleryImages[prevIdx]);
+  };
+
+  const handleNextImage = () => {
+    const nextIdx = activeImageIndex === allGalleryImages.length - 1 ? 0 : activeImageIndex + 1;
+    handleSelectThumbnail(allGalleryImages[nextIdx]);
+  };
+
   useEffect(() => {
     window.scrollTo(0, 0);
     if (product?.variants?.length === 1) {
@@ -144,8 +230,19 @@ const ProductDetails: React.FC = () => {
   };
 
   const handleAttrSelect = (name: string, value: string) => {
-    setSelectedAttrValues(prev => ({ ...prev, [name]: value }));
+    const newSelected = { ...selectedAttrValues, [name]: value };
+    setSelectedAttrValues(newSelected);
     setSelectionError(null);
+
+    // If there is a variant matching this attribute selection that has an image, switch active image
+    if (product?.variants) {
+      const matchedVariant = product.variants.find(v =>
+        v.attributeValues && Object.entries(newSelected).every(([k, val]) => v.attributeValues[k] === val)
+      );
+      if (matchedVariant?.image) {
+        setActiveImageUrl(matchedVariant.image);
+      }
+    }
   };
 
   const handleShare = () => {
@@ -193,8 +290,6 @@ const ProductDetails: React.FC = () => {
 
   const displayPrice = currentVariant ? currentVariant.price : product.price;
   const displayOriginalPrice = currentVariant ? currentVariant.originalPrice : product.originalPrice;
-  const displayImages = product.images && product.images.length > 0 ? product.images : ['https://placehold.co/600x600?text=No+Image'];
-  const variantImage = currentVariant?.image;
 
   // Primary Category Breadcrumb link
   const primaryCategoryName = product.category && product.category.length > 0 ? product.category[0] : '';
@@ -232,56 +327,76 @@ const ProductDetails: React.FC = () => {
         <div className="bg-white rounded-2xl border border-gray-200/80 p-5 md:p-10 shadow-2xs">
           <div className="flex flex-col lg:flex-row gap-10 lg:gap-14">
             
-            {/* Gallery Section */}
-            <div className="lg:w-1/2 space-y-4">
-              <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-2xs aspect-square flex items-center justify-center relative group">
-                <InlineImageZoom
-                  imageUrl={variantImage || displayImages[activeImageIdx] || ''}
-                  altText={product.name}
-                  onOpenModal={() => setIsZoomOpen(true)}
-                />
-                {displayImages.length > 1 && !variantImage && (
-                  <>
-                    <button 
-                      onClick={() => setActiveImageIdx(prev => (prev === 0 ? displayImages.length - 1 : prev - 1))} 
-                      className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 shadow-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-gray-700 hover:text-[#F0264C] z-20 cursor-pointer"
-                    >
-                      <ChevronLeft size={20} />
-                    </button>
-                    <button 
-                      onClick={() => setActiveImageIdx(prev => (prev === displayImages.length - 1 ? 0 : prev + 1))} 
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 shadow-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-gray-700 hover:text-[#F0264C] z-20 cursor-pointer"
-                    >
-                      <ChevronRight size={20} />
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* Fullscreen Zoom Modal */}
-              <ImageZoomModal
-                imageUrl={variantImage || displayImages[activeImageIdx] || ''}
-                altText={product.name}
-                isOpen={isZoomOpen}
-                onClose={() => setIsZoomOpen(false)}
-              />
-
-              {/* Thumbnails */}
-              {!variantImage && displayImages.length > 1 && (
-                <div data-lenis-prevent="true" className="flex gap-2.5 overflow-x-auto pb-2 custom-scrollbar">
-                  {displayImages.map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setActiveImageIdx(idx)}
-                      className={`w-18 h-18 rounded-xl border-2 shrink-0 p-1 bg-white transition-all cursor-pointer ${
-                        activeImageIdx === idx ? 'border-[#F0264C] shadow-sm' : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <img src={img} alt="" className="w-full h-full object-contain" />
-                    </button>
-                  ))}
+            {/* Gallery Section with Vertical Left Thumbnails (Matching User Reference Image 2) */}
+            <div className="lg:w-1/2 flex flex-col-reverse md:flex-row gap-3 md:gap-4 items-start">
+              
+              {/* Left Column: Vertical Thumbnails (Image 2 style) */}
+              {allGalleryImages.length > 1 && (
+                <div 
+                  data-lenis-prevent="true"
+                  className="flex md:flex-col gap-2.5 overflow-x-auto md:overflow-y-auto max-h-[520px] xl:max-h-[580px] pb-2 md:pb-0 md:pr-1 custom-scrollbar shrink-0 w-full md:w-20"
+                >
+                  {allGalleryImages.map((item, idx) => {
+                    const isActive = activeImageIndex === idx;
+                    return (
+                      <button
+                        key={`${item.url}-${idx}`}
+                        onClick={() => handleSelectThumbnail(item)}
+                        className={`w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 shrink-0 p-1.5 bg-white transition-all cursor-pointer relative overflow-hidden group flex items-center justify-center ${
+                          isActive 
+                            ? 'border-gray-900 ring-2 ring-gray-900/20 shadow-sm' 
+                            : 'border-gray-200 hover:border-gray-400'
+                        }`}
+                        title={item.label}
+                      >
+                        <img 
+                          src={item.url} 
+                          alt={item.label || product.name} 
+                          className="w-full h-full object-contain transition-transform duration-200 group-hover:scale-105" 
+                        />
+                      </button>
+                    );
+                  })}
                 </div>
               )}
+
+              {/* Main Image Container */}
+              <div className="flex-1 min-w-0 w-full">
+                <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-2xs aspect-square flex items-center justify-center relative group">
+                  <InlineImageZoom
+                    imageUrl={activeImageUrl || allGalleryImages[0]?.url || ''}
+                    altText={product.name}
+                    onOpenModal={() => setIsZoomOpen(true)}
+                  />
+                  {allGalleryImages.length > 1 && (
+                    <>
+                      <button 
+                        onClick={handlePrevImage} 
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 shadow-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-gray-700 hover:text-[#F0264C] z-20 cursor-pointer"
+                        title="Previous image"
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
+                      <button 
+                        onClick={handleNextImage} 
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/90 shadow-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-gray-700 hover:text-[#F0264C] z-20 cursor-pointer"
+                        title="Next image"
+                      >
+                        <ChevronRight size={20} />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Fullscreen Zoom Modal */}
+                <ImageZoomModal
+                  imageUrl={activeImageUrl || allGalleryImages[0]?.url || ''}
+                  altText={product.name}
+                  isOpen={isZoomOpen}
+                  onClose={() => setIsZoomOpen(false)}
+                />
+              </div>
+
             </div>
 
             {/* Product Summary / Purchase Column (Image 1 Layout) */}
