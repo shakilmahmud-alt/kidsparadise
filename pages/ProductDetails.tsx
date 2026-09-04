@@ -26,7 +26,7 @@ import PageSkeleton from '../components/PageSkeleton';
 const ProductDetails: React.FC = () => {
   const { slug } = useParams() as { slug: string };
   const navigate = useNavigate();
-  const { products, addToCart, reviews, addReview, userProfile, wishlist, toggleWishlist, openCart, categories, loading, isStoreLoaded } = useStore();
+  const { products, addToCart, reviews, addReview, userProfile, wishlist, toggleWishlist, openCart, closeCart, categories, loading, isStoreLoaded } = useStore();
   const [quantity, setQuantity] = useState(1);
   const [selectedAttrValues, setSelectedAttrValues] = useState<Record<string, string>>({});
   const [selectionError, setSelectionError] = useState<string | null>(null);
@@ -225,7 +225,8 @@ const ProductDetails: React.FC = () => {
       return;
     }
     setSelectionError(null);
-    addToCart(product, currentVariant || undefined, quantity);
+    addToCart(product, currentVariant || undefined, quantity, false);
+    closeCart();
     navigate('/checkout');
   };
 

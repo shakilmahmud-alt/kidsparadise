@@ -235,9 +235,11 @@ export const HeroSection: React.FC = () => {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    const q = searchQuery.trim();
+    if (q) {
+      navigate(`/products?search=${encodeURIComponent(q)}`);
       setShowSearchDropdown(false);
+      setSearchQuery('');
     }
   };
 
@@ -303,6 +305,7 @@ export const HeroSection: React.FC = () => {
                     className="flex items-center gap-4 p-3 hover:bg-rose-50/40 transition-colors cursor-pointer group"
                     onClick={() => {
                       setShowSearchDropdown(false);
+                      setSearchQuery('');
                       navigate(`/product/${product.slug || product.id}`);
                     }}
                   >
@@ -351,6 +354,7 @@ export const HeroSection: React.FC = () => {
                       onClick={() => {
                         navigate('/products');
                         setShowSearchDropdown(false);
+                        setSearchQuery('');
                       }}
                       className="mt-3 text-xs font-bold text-[#F0264C] hover:underline cursor-pointer"
                     >

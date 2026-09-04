@@ -5,7 +5,7 @@ import { Truck, ChevronDown, Loader2, CreditCard, Ticket, AlertCircle, ShieldChe
 import { DISTRICT_AREA_DATA } from '../constants';
 
 const Checkout: React.FC = () => {
-  const { cart, appliedCoupon, placeOrder, shippingSettings, user, userProfile, addresses, restoreCart, clearCart } = useStore();
+  const { cart, appliedCoupon, placeOrder, shippingSettings, user, userProfile, addresses, restoreCart, clearCart, closeCart } = useStore();
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
@@ -46,6 +46,10 @@ const Checkout: React.FC = () => {
       restoreCart();
     }
   }, [user, userProfile, addresses, restoreCart]);
+  
+  useEffect(() => {
+    closeCart();
+  }, [closeCart]);
   
   const districts = Object.keys(DISTRICT_AREA_DATA).sort((a, b) => a.localeCompare(b));
   const areas = formData.district ? DISTRICT_AREA_DATA[formData.district] : [];

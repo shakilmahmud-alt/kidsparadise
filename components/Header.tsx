@@ -176,12 +176,13 @@ export const Header: React.FC = () => {
     return filterAndRankProducts(source, searchQuery);
   }, [products, frontendProducts, searchQuery]);
 
-  // Sync search query with URL and close menus
+  // Sync search query with URL, reset search on page change, and close menus
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsStickyMenuOpen(false);
     setShowResults(false);
-  }, [location.pathname, location.search]);
+    setSearchQuery('');
+  }, [location.pathname]);
 
   // Handle sticky header on scroll
   useEffect(() => {
@@ -198,9 +199,11 @@ export const Header: React.FC = () => {
   }, []);
 
   const handleSearch = () => {
-    if (searchQuery.trim()) {
-      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    const q = searchQuery.trim();
+    if (q) {
+      navigate(`/products?search=${encodeURIComponent(q)}`);
       setShowResults(false);
+      setSearchQuery('');
     }
   };
 
@@ -305,6 +308,7 @@ export const Header: React.FC = () => {
                       className="flex items-center gap-3.5 p-3 hover:bg-rose-50/40 transition-colors cursor-pointer group"
                       onClick={() => {
                         setShowResults(false);
+                        setSearchQuery('');
                         navigate(`/product/${product.slug || product.id}`);
                       }}
                     >
@@ -353,6 +357,7 @@ export const Header: React.FC = () => {
                         onClick={() => {
                           navigate('/products');
                           setShowResults(false);
+                          setSearchQuery('');
                         }}
                         className="mt-3 text-xs font-bold text-[#F0264C] hover:underline cursor-pointer"
                       >
@@ -743,6 +748,7 @@ export const Header: React.FC = () => {
                     className="flex items-center gap-3.5 p-3 hover:bg-rose-50/40 transition-colors cursor-pointer group"
                     onClick={() => {
                       setShowResults(false);
+                      setSearchQuery('');
                       navigate(`/product/${product.slug || product.id}`);
                     }}
                   >
@@ -791,6 +797,7 @@ export const Header: React.FC = () => {
                       onClick={() => {
                         navigate('/products');
                         setShowResults(false);
+                        setSearchQuery('');
                       }}
                       className="mt-3 text-xs font-bold text-[#F0264C] hover:underline cursor-pointer"
                     >

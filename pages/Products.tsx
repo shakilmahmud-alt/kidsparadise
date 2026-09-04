@@ -644,7 +644,7 @@ const Products: React.FC = () => {
             <div className="hidden lg:flex bg-white p-4 rounded-2xl border border-gray-100 shadow-sm justify-between items-center gap-4 w-full">
               <p className="text-xs md:text-sm font-medium text-gray-500">
                 Showing <span className="font-bold text-gray-800">{filteredProducts.length}</span> results 
-
+                {searchParamVal && <span> for "<span className="text-rose-500 font-bold">{searchParamVal}</span>"</span>}
                 {selectedCategory !== 'All' && <span className="hidden sm:inline"> in <span className="text-rose-500 font-bold">{selectedCategory}</span></span>}
               </p>
 
@@ -677,6 +677,7 @@ const Products: React.FC = () => {
               <div className="flex items-center gap-2 overflow-hidden flex-1">
                 <p className="text-xs font-bold text-gray-500 shrink-0">
                   Showing <span className="text-gray-800 font-black">{filteredProducts.length}</span>
+                  {searchParamVal && <span className="text-rose-500 font-bold"> for "{searchParamVal}"</span>}
                 </p>
                 <div className="h-4 w-[1px] bg-gray-200 shrink-0"></div>
                 <select 

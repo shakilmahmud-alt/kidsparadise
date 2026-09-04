@@ -43,7 +43,7 @@ interface StoreContextType {
   isStoreLoaded: boolean;
   setAdminTab: (tab: AdminTab) => void;
   toggleAdmin: () => void;
-  addToCart: (product: Product, variant?: Variant, quantity?: number) => void;
+  addToCart: (product: Product, variant?: Variant, quantity?: number, openCartSidebar?: boolean) => void;
   removeFromCart: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, delta: number) => void;
   clearCart: () => void;
@@ -416,7 +416,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [appliedCoupon]);
 
-  const addToCart = (product: Product, variant?: Variant, quantity: number = 1) => {
+  const addToCart = (product: Product, variant?: Variant, quantity: number = 1, openCartSidebar: boolean = true) => {
     const cartItemId = variant ? `${product.id}-${variant.id}` : product.id;
     setCart(prev => {
       const existing = prev.find(item => (item.selectedVariantId ? `${item.id}-${item.selectedVariantId}` : item.id) === cartItemId);
@@ -435,7 +435,11 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         price: variant ? variant.price : product.price
       }];
     });
-    setIsCartOpen(true);
+    if (openCartSidebar) {
+      setIsCartOpen(true);
+    } else {
+      setIsCartOpen(false);
+    }
   };
 
   const placeOrder = async (customerDetails: any): Promise<Order> => {
