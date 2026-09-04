@@ -398,11 +398,11 @@ const Checkout: React.FC = () => {
               <button 
                 type="submit" 
                 disabled={isSubmitting} 
-                className={`w-full mt-6 md:mt-10 text-white font-black py-4 md:py-6 rounded-[15px] md:rounded-[20px] shadow-2xl transition-all flex items-center justify-center gap-3 uppercase tracking-[1px] md:tracking-[2px] text-sm md:text-[16px] relative z-10 cursor-pointer ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none' : 'bg-[#F0264C] hover:bg-[#d01c3f] shadow-rose-100/50 active:scale-95'}`}
+                className={`w-full mt-6 md:mt-8 text-white font-extrabold py-3.5 md:py-4 px-6 rounded-xl md:rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2 uppercase tracking-wider text-xs md:text-[13px] relative z-10 cursor-pointer ${isSubmitting ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none' : 'bg-[#F0264C] hover:bg-[#d01c3f] shadow-rose-100/50 active:scale-95'}`}
               >
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Processing Order...</span>
                   </span>
                 ) : (
