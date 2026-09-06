@@ -12,6 +12,15 @@ function safeJson(val, defaultVal = null) {
   }
 }
 
+let cachedStoreData = null;
+let lastCacheTime = 0;
+const CACHE_TTL_MS = 60 * 1000; // 60s cache
+
+export function invalidateStoreCache() {
+  cachedStoreData = null;
+  lastCacheTime = 0;
+}
+
 let stockColumnChecked = false;
 async function ensureStockColumn() {
   if (stockColumnChecked) return;
@@ -26,28 +35,62 @@ export default async function handler(req, res) {
   const path = req.path || (req.url ? req.url.split('?')[0] : '') || '';
   const method = req.method;
 
+  // Invalidate cache on mutations
+  if (method !== 'GET') {
+    invalidateStoreCache();
+  }
+
   try {
     // 1. Unified Store Initial Data: GET /api/store-data
     if (method === 'GET' && (path === '/api/store-data' || path.endsWith('/store-data'))) {
-      const [
-        products,
-        categories,
-        brands,
-        coupons,
-        reviews,
-        settingsRows,
-        attributes,
-        pages
-      ] = await Promise.all([
-        query('SELECT * FROM products ORDER BY created_at DESC'),
-        query('SELECT * FROM categories ORDER BY name ASC'),
-        query('SELECT * FROM brands ORDER BY name ASC'),
-        query('SELECT * FROM coupons ORDER BY created_at DESC'),
-        query('SELECT * FROM reviews ORDER BY created_at DESC'),
-        query('SELECT * FROM settings'),
-        query('SELECT * FROM attributes ORDER BY name ASC'),
-        query('SELECT * FROM pages ORDER BY created_at DESC')
-      ]);
+      if (cachedStoreData && (Date.now() - lastCacheTime < CACHE_TTL_MS)) {
+        res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+        return res.status(200).json(cachedStoreData);
+      }
+
+      let rawStoreData = null;
+      try {
+        const bridgeUrl = process.env.DB_BRIDGE_URL || 'https://kidsparadise.com.bd/api.php';
+        const bridgeRes = await fetch(`${bridgeUrl}?action=store-data`, {
+          headers: { 'X-API-Secret': process.env.JWT_SECRET || 'kidsparadise_jwt_secret_key_2026' }
+        });
+        if (bridgeRes.ok) {
+          rawStoreData = await bridgeRes.json();
+        }
+      } catch (e) {}
+
+      let products, categories, brands, coupons, reviews, settingsRows, attributes, pages;
+
+      if (rawStoreData && Array.isArray(rawStoreData.products)) {
+        products = rawStoreData.products;
+        categories = rawStoreData.categories || [];
+        brands = rawStoreData.brands || [];
+        coupons = rawStoreData.coupons || [];
+        reviews = rawStoreData.reviews || [];
+        settingsRows = rawStoreData.settings || [];
+        attributes = rawStoreData.attributes || [];
+        pages = rawStoreData.pages || [];
+      } else {
+        [
+          products,
+          categories,
+          brands,
+          coupons,
+          reviews,
+          settingsRows,
+          attributes,
+          pages
+        ] = await Promise.all([
+          query('SELECT * FROM products ORDER BY created_at DESC'),
+          query('SELECT * FROM categories ORDER BY name ASC'),
+          query('SELECT * FROM brands ORDER BY name ASC'),
+          query('SELECT * FROM coupons ORDER BY created_at DESC'),
+          query('SELECT * FROM reviews ORDER BY created_at DESC'),
+          query('SELECT * FROM settings'),
+          query('SELECT * FROM attributes ORDER BY name ASC'),
+          query('SELECT * FROM pages ORDER BY created_at DESC')
+        ]);
+      }
 
       const formattedProducts = products.map(p => {
         let cats = p.category ? p.category.split(',').map(c => c.trim().replace(/&amp;/g, '&')) : [];
@@ -170,7 +213,7 @@ export default async function handler(req, res) {
         status: pg.status
       }));
 
-      return res.status(200).json({
+      const payload = {
         products: formattedProducts,
         categories: formattedCategories,
         brands: formattedBrands,
@@ -179,7 +222,13 @@ export default async function handler(req, res) {
         settings: settingsMap,
         attributes: formattedAttributes,
         pages: formattedPages
-      });
+      };
+
+      cachedStoreData = payload;
+      lastCacheTime = Date.now();
+
+      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+      return res.status(200).json(payload);
     }
 
     // 2. Orders API

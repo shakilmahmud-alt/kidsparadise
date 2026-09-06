@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     const cleanEmail = email.trim().toLowerCase();
 
     try {
-      const existing = await query('SELECT id FROM users WHERE LOWER(email) = ?', [cleanEmail]);
+      const existing = await query('SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1', [cleanEmail]);
       if (existing.length > 0) {
         return res.status(400).json({ error: 'An account with this email already exists' });
       }
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     const cleanEmail = email.trim().toLowerCase();
 
     try {
-      const users = await query('SELECT id, email, password_hash, full_name, role FROM users WHERE LOWER(email) = ?', [cleanEmail]);
+      const users = await query('SELECT id, email, password_hash, full_name, role FROM users WHERE LOWER(email) = ? LIMIT 1', [cleanEmail]);
       if (users.length === 0) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
@@ -136,7 +136,7 @@ export default async function handler(req, res) {
     }
 
     try {
-      const users = await query('SELECT id, email, full_name, role, created_at FROM users WHERE id = ?', [decoded.id]);
+      const users = await query('SELECT id, email, full_name, role, created_at FROM users WHERE id = ? LIMIT 1', [decoded.id]);
       if (users.length === 0) {
         return res.status(404).json({ error: 'User not found' });
       }

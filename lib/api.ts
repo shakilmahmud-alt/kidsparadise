@@ -27,7 +27,7 @@ export function setStoredUser(user: any) {
   localStorage.setItem('auth_user', JSON.stringify(user));
 }
 
-async function request(url: string, options: RequestInit = {}) {
+async function request(url: string, options: RequestInit = {}, retries: number = 1) {
   const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -38,16 +38,54 @@ async function request(url: string, options: RequestInit = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers
-  });
+  let lastError: any = null;
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || data.message || `Request failed with status ${response.status}`);
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers
+      });
+
+      const text = await response.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch (jsonErr) {
+        if (text.includes('508') || text.includes('Resource Limit')) {
+          throw new Error('Database server is temporarily busy. Retrying...');
+        }
+        if (response.status === 504 || text.includes('504 Gateway')) {
+          throw new Error('Server took too long to respond. Retrying...');
+        }
+        throw new Error(text.substring(0, 120) || `Server returned error (${response.status})`);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || data.message || `Request failed with status ${response.status}`);
+      }
+      return data;
+    } catch (err: any) {
+      lastError = err;
+      const isRetryable =
+        err.name === 'TypeError' ||
+        err.message?.includes('Failed to fetch') ||
+        err.message?.includes('temporarily busy') ||
+        err.message?.includes('Retrying');
+
+      if (attempt < retries && isRetryable) {
+        await new Promise(r => setTimeout(r, 600 * (attempt + 1)));
+        continue;
+      }
+      break;
+    }
   }
-  return data;
+
+  if (lastError?.message?.includes('Failed to fetch')) {
+    throw new Error('Could not reach server. The connection is busy or starting up. Please try again in a moment.');
+  }
+
+  throw lastError;
 }
 
 export const api = {
