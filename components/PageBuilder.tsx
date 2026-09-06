@@ -7,7 +7,7 @@ import {
     Globe, Anchor, Coffee, Package, Layers, Info, CheckCircle, ChevronDown, Mail, FileText, MessageSquare
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { uploadToImageKit } from '../lib/imagekit';
+import { uploadToCpanel } from '../lib/cpanelUpload';
 
 // --- Types ---
 
@@ -275,7 +275,7 @@ const StoryBlockEditor = ({ data, onChange }: { data: any, onChange: (d: any) =>
         const file = e.target.files?.[0];
         if (!file) return;
         try {
-            const url = await uploadToImageKit(file, '/pagebuilder');
+            const url = await uploadToCpanel(file, 'pagebuilder');
             onChange({ ...data, image_url: url });
         } catch (error: any) {
             console.error("Error uploading image:", error);
@@ -336,7 +336,7 @@ const HeroSectionEditor = ({ data, onChange }: { data: any, onChange: (d: any) =
         const file = e.target.files?.[0];
         if (!file) return;
         try {
-            const url = await uploadToImageKit(file, '/pagebuilder');
+            const url = await uploadToCpanel(file, 'pagebuilder');
             onChange({ ...data, background_url: url });
         } catch (error: any) {
             console.error("Error uploading image:", error);

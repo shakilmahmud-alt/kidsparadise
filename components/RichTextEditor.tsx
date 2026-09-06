@@ -7,7 +7,7 @@ import {
   Minimize2, Palette, Smile, Type as TypeIcon, X
 } from 'lucide-react';
 
-import { uploadToImageKit } from '../lib/imagekit';
+import { uploadToCpanel } from '../lib/cpanelUpload';
 
 interface RichTextEditorProps {
   value: string;
@@ -59,7 +59,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, label,
 
     try {
       setIsUploading(true);
-      const url = await uploadToImageKit(file, '/richtext');
+      const url = await uploadToCpanel(file, 'richtext');
       execCommand('insertImage', url);
     } catch (error: any) {
       alert(`Upload failed: ${error.message}`);

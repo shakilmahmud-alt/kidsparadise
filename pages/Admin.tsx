@@ -14,8 +14,7 @@ import { Product, Category, Order, Variant, ShippingSettings, Brand, Coupon, Car
 import { PageBuilder } from '../components/PageBuilder';
 import RichTextEditor from '../components/RichTextEditor';
 import { DISTRICT_AREA_DATA } from '../constants';
-import ProductImageUpload from '../components/ProductImageUpload';
-import { uploadToImageKit } from '../lib/imagekit';
+import { uploadToCpanel } from '../lib/cpanelUpload';
 import MediaManager from '../components/MediaManager';
 
 
@@ -246,7 +245,7 @@ const Admin: React.FC = () => {
     if (file) {
       setIsUploadingImage(true);
       try {
-        const url = await uploadToImageKit(file, '/support');
+        const url = await uploadToCpanel(file, 'support');
         setStoreForm(prev => ({
           ...prev,
           floatingWidget: { ...(prev.floatingWidget || {}), supportImage: url }
@@ -1296,7 +1295,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
     const file = e.target.files[0];
     setIsUploadingImage(true);
     try {
-      const url = await uploadToImageKit(file, '/sections');
+      const url = await uploadToCpanel(file, 'sections');
       setSectionForm({ ...sectionForm, banner: { ...sectionForm.banner!, imageUrl: url } });
     } catch (error: any) {
       alert('Error uploading image: ' + error.message);
@@ -1310,7 +1309,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
     const file = e.target.files[0];
     setIsUploadingImage(true);
     try {
-      const url = await uploadToImageKit(file, '/sections');
+      const url = await uploadToCpanel(file, 'sections');
       const newBanners = [...(sectionForm.banners || [])];
       for (let i = 0; i <= index; i++) {
         if (!newBanners[i]) newBanners[i] = { imageUrl: '', link: '' };
@@ -1350,7 +1349,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
     const file = e.target.files[0];
     setIsUploadingImage(true);
     try {
-      const url = await uploadToImageKit(file, '/blogs');
+      const url = await uploadToCpanel(file, 'blogs');
       setBlogForm(prev => ({ ...prev, imageUrl: url }));
     } catch (error: any) {
       alert('Error uploading image: ' + error.message);
@@ -1408,7 +1407,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
     const file = e.target.files[0];
     setIsUploadingImage(true);
     try {
-      const url = await uploadToImageKit(file, '/brands');
+      const url = await uploadToCpanel(file, 'brands');
       setBrandForm(prev => ({ ...prev, logo_url: url }));
     } catch (error: any) {
       alert('Error uploading logo: ' + error.message);
@@ -1538,7 +1537,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
     if (!file) return;
     setIsUploadingImage(true);
     try {
-      const url = await uploadToImageKit(file, '/store');
+      const url = await uploadToCpanel(file, 'store');
       setStoreForm(prev => ({ ...prev, logo_url: url }));
     } catch (error: any) {
       alert(`Error uploading logo: ${error.message}`);
@@ -1552,7 +1551,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
     if (!file) return;
     setIsUploadingImage(true);
     try {
-      const url = await uploadToImageKit(file, '/banners');
+      const url = await uploadToCpanel(file, 'banners');
       setBannerForm(prev => ({ ...prev, image_url: url }));
     } catch (error: any) {
       alert(`Error uploading image: ${error.message}`);
@@ -2943,48 +2942,11 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                         setIsUploadingImage(true);
                         try {
                           const newUrls: string[] = [];
-                          for (const file of files) {
-                            let authRes;
-                            try {
-                              authRes = await fetch('/api/imagekit-auth');
-                            } catch (e: any) {
-                              throw new Error(`Authentication fetch failed (Network/Adblocker/CORS): ${e.message}`);
-                            }
-
-                            if (!authRes.ok) {
-                              const errData = await authRes.json().catch(() => ({}));
-                              console.error('Failed to authenticate for file', file.name, errData);
-                              alert(`Authentication failed: Server returned ${authRes.status}. Ensure backend is running and env vars are set.`);
-                              continue; // Skip this file and try the next one
-                            }
-                            const authData = await authRes.json();
-                            
-                            const formData = new FormData();
-                            formData.append('file', file);
-                            formData.append('publicKey', authData.publicKey || import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY as string);
-                            formData.append('signature', authData.signature);
-                            formData.append('expire', authData.expire.toString());
-                            formData.append('token', authData.token);
-                            formData.append('fileName', file.name);
-                            formData.append('folder', '/products');
-                            
-                            let uploadRes;
-                            try {
-                              uploadRes = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
-                                method: 'POST',
-                                body: formData,
-                              });
-                            } catch (e: any) {
-                              throw new Error(`ImageKit upload blocked (Network/Adblocker): ${e.message}. Please disable adblockers and try again.`);
-                            }
-                            
-                            if (uploadRes.ok) {
-                              const data = await uploadRes.json();
-                              newUrls.push(data.url);
-                            } else {
-                              const errData = await uploadRes.json().catch(() => ({}));
-                              console.error('ImageKit direct upload failed for', file.name, ':', errData);
-                              alert(`Upload failed: ${errData.message || 'Unknown error from ImageKit'}`);
+                          for (let i = 0; i < files.length; i++) {
+                            const file = files[i];
+                            const url = await uploadToCpanel(file, 'products');
+                            if (url) {
+                              newUrls.push(url);
                             }
                           }
                           
@@ -3000,7 +2962,7 @@ CREATE POLICY "Public read blog" ON public.blog_posts FOR SELECT USING (true);`;
                       {isUploadingImage ? (
                         <>
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#e92c5d] mb-2"></div>
-                          <p className="text-[#e92c5d] font-black text-lg">Uploading...</p>
+                          <p className="text-[#e92c5d] font-black text-lg">Uploading to cPanel...</p>
                         </>
                       ) : (
                         <>
