@@ -438,13 +438,7 @@ const ProductDetails: React.FC = () => {
                 />
               )}
 
-              {/* Stock Status Pill Badge */}
-              <div className="pt-1">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-[#EAF7EE] text-[#1E8E3E] text-xs font-bold">
-                  <span className="w-2 h-2 rounded-full bg-[#1E8E3E] animate-pulse"></span>
-                  {currentVariant ? (currentVariant.stock > 0 ? `${currentVariant.stock} in stock` : 'Out of stock') : (product.stock ? `${product.stock} in stock` : 'In stock')}
-                </span>
-              </div>
+
 
               {/* Action Buttons: Wishlist & Share */}
               <div className="flex items-center gap-6 py-2 border-y border-gray-100">
