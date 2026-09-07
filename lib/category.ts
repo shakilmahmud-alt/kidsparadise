@@ -13,26 +13,31 @@ export function cleanCategoryString(str: string): string {
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
     .replace(/&#039;/g, "'")
+    .replace(/&nbsp;/g, ' ')
     .toLowerCase()
     .trim();
 }
 
 /**
- * Generates a clean URL slug from any category name
+ * Generates a clean URL slug from any category or product name.
+ * Converts special characters (&, /, +, commas, etc.) into clean hyphens.
  */
 export function slugify(text: string): string {
+  if (!text) return '';
   return cleanCategoryString(text)
-    .replace(/&/g, '')
-    .replace(/[^\w\s-]/g, '')
+    .replace(/&/g, '') // remove & or replace with and
+    .replace(/[\/\\]+/g, '-') // slashes to hyphen
+    .replace(/[^a-z0-9\s-_]/g, '') // remove remaining special chars
     .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+    .replace(/[\s_]+/g, '-') // spaces and underscores to hyphen
+    .replace(/-+/g, '-') // remove duplicate hyphens
+    .replace(/^-+|-+$/g, ''); // trim hyphens from ends
 }
 
 /**
  * Known aliases across WooCommerce, database imports, and URL routing
  */
-const CATEGORY_ALIASES: Record<string, string[]> = {
+export const CATEGORY_ALIASES: Record<string, string[]> = {
   'gear-travel': ['gear & travel', 'gear and travel', 'gear-travel'],
   'gear & travel': ['gear-travel', 'gear & travel', 'gear and travel'],
   'baby-care-hygiene': ['care & hygiene', 'baby care & hygiene', 'care-hygiene', 'baby-care-hygiene'],
@@ -53,6 +58,123 @@ const CATEGORY_ALIASES: Record<string, string[]> = {
   'diapers-wipes-potty': ['diapers, wipes & potty', 'diapers', 'potty', 'wipes', 'diapers-wipes-potty'],
   'bathing-essentials': ['bathing essentials', 'bath tubs', 'bath tub', 'bathing-essentials']
 };
+
+/**
+ * Returns the ordered array of ancestor categories leading up to the given category:
+ * [RootParent, SubCategory, SubSubCategory, Category]
+ */
+export function getCategoryAncestors(category: Partial<Category> | null | undefined, categories: Category[]): Category[] {
+  if (!category) return [];
+  const fullCategory = categories.find(c => c.id === category.id || (category.slug && (c.slug === category.slug || slugify(c.name) === slugify(category.slug)))) || (category as Category);
+  const trail: Category[] = [fullCategory];
+  const visited = new Set<string>([String(fullCategory.id)]);
+  let current: any = fullCategory;
+
+  while (current) {
+    const pId = current.parentId || current.parent_id;
+    if (!pId || pId === '0' || pId === 0) break;
+    const parent = categories.find(c => String(c.id) === String(pId));
+    if (parent && !visited.has(String(parent.id))) {
+      trail.unshift(parent);
+      visited.add(String(parent.id));
+      current = parent;
+    } else {
+      break;
+    }
+  }
+
+  return trail;
+}
+
+/**
+ * Computes the full hierarchical path string for a category (e.g. "furniture-bedding/baby-cots")
+ */
+export function getCategoryPath(category: Partial<Category> | null | undefined, categories: Category[]): string {
+  if (!category) return '';
+  // If it's a partial category or matched category
+  const fullCategory = categories.find(c => c.id === category.id || (category.slug && (c.slug === category.slug || slugify(c.name) === slugify(category.slug)))) || category as Category;
+  const ancestors = getCategoryAncestors(fullCategory, categories);
+  return ancestors
+    .map(c => slugify(c.slug || c.name))
+    .filter(Boolean)
+    .join('/');
+}
+
+/**
+ * Returns the full hierarchical URL for any category (e.g. "/category/furniture-bedding/baby-cots/")
+ */
+export function getCategoryUrl(category: Partial<Category> | string | null | undefined, categories: Category[] = []): string {
+  if (!category) return '/products';
+
+  if (typeof category === 'string') {
+    const found = findCategoryBySlugOrName(categories, category);
+    if (found) {
+      const path = getCategoryPath(found, categories);
+      return `/category/${path}/`;
+    }
+    const clean = slugify(category);
+    return clean ? `/category/${clean}/` : '/products';
+  }
+
+  // If category object was passed
+  const found = categories.find(c => c.id === category.id || (category.slug && (c.slug === category.slug || slugify(c.name) === slugify(category.slug)))) || category;
+  const path = getCategoryPath(found as Category, categories);
+  return path ? `/category/${path}/` : '/products';
+}
+
+/**
+ * Finds a category from categories list by full hierarchical path, single slug, name, ID, or alias.
+ * Supports:
+ * - "furniture-bedding/baby-cots"
+ * - "baby-cots"
+ * - "Baby Cots"
+ */
+export function findCategoryByPathOrSlug(categories: Category[], pathOrSlug: string): Category | null {
+  if (!pathOrSlug || !categories || categories.length === 0) return null;
+
+  // Clean raw path (remove leading/trailing slashes, lowercase)
+  const cleanPath = pathOrSlug.replace(/^\/+|\/+$/g, '').trim();
+  const segments = cleanPath.split('/').map(s => slugify(s)).filter(Boolean);
+
+  if (segments.length === 0) return null;
+
+  const leafSlug = segments[segments.length - 1];
+
+  // 1. If multi-segment path, find categories matching the leaf slug and verify parent trail
+  if (segments.length > 1) {
+    const matchingLeaves = categories.filter(c => {
+      const cSlug = slugify(c.slug || c.name);
+      return cSlug === leafSlug || cleanCategoryString(c.slug || '') === leafSlug || cleanCategoryString(c.name) === leafSlug;
+    });
+
+    if (matchingLeaves.length > 0) {
+      for (const candidate of matchingLeaves) {
+        const candidatePath = getCategoryPath(candidate, categories);
+        const candidateSegments = candidatePath.split('/').map(s => slugify(s));
+        
+        // Exact path match
+        if (candidateSegments.join('/') === segments.join('/')) {
+          return candidate;
+        }
+
+        // Suffix match (e.g. if path has fewer or extra segments)
+        if (candidateSegments[candidateSegments.length - 1] === leafSlug) {
+          const parentSegment = segments[segments.length - 2];
+          const candidateParentSegment = candidateSegments[candidateSegments.length - 2];
+          if (parentSegment === candidateParentSegment) {
+            return candidate;
+          }
+        }
+      }
+
+      // If no exact parent match, return the first leaf match
+      return matchingLeaves[0];
+    }
+  }
+
+  // 2. Direct match or alias match via findCategoryBySlugOrName
+  return findCategoryBySlugOrName(categories, leafSlug);
+}
 
 /**
  * Finds a category from categories list by slug, name, ID, or alias.

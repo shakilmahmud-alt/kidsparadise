@@ -22,9 +22,12 @@ import { Variant, Review } from '../types';
 import ProductCard from '../components/ProductCard';
 import { InlineImageZoom, ImageZoomModal } from '../components/ImageZoom';
 import PageSkeleton from '../components/PageSkeleton';
+import { findCategoryBySlugOrName, getCategoryAncestors, getCategoryUrl } from '../lib/category';
 
 const ProductDetails: React.FC = () => {
-  const { slug } = useParams() as { slug: string };
+  const params = useParams<{ slug?: string; '*'?: string }>();
+  const rawSlug = params['*'] || params.slug || '';
+  const productSlug = rawSlug.split('/').filter(Boolean).pop() || '';
   const navigate = useNavigate();
   const { products, addToCart, reviews, addReview, userProfile, wishlist, toggleWishlist, openCart, closeCart, categories, loading, isStoreLoaded } = useStore();
   const [quantity, setQuantity] = useState(1);
@@ -40,7 +43,7 @@ const ProductDetails: React.FC = () => {
   const [reviewRating, setReviewRating] = useState(0);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-  const product = products.find(p => p.slug === slug || p.id === slug);
+  const product = products.find(p => p.slug === productSlug || p.id === productSlug || p.slug === rawSlug || p.id === rawSlug);
   const productReviews = useMemo(() => reviews.filter(r => r.productId === product?.id), [reviews, product]);
 
   const isWishlisted = product ? wishlist.includes(product.id) : false;
@@ -292,9 +295,17 @@ const ProductDetails: React.FC = () => {
   const displayPrice = currentVariant ? currentVariant.price : product.price;
   const displayOriginalPrice = currentVariant ? currentVariant.originalPrice : product.originalPrice;
 
-  // Primary Category Breadcrumb link
-  const primaryCategoryName = product.category && product.category.length > 0 ? product.category[0] : '';
-  const primaryCategory = categories.find(c => c.name.toLowerCase() === primaryCategoryName.toLowerCase());
+  // Primary Category Breadcrumb link & Ancestor trail
+  const primaryCategoryName = product?.category && product.category.length > 0 ? product.category[0] : '';
+  const primaryCategory = useMemo(() => {
+    if (!primaryCategoryName) return null;
+    return findCategoryBySlugOrName(categories, primaryCategoryName);
+  }, [primaryCategoryName, categories]);
+
+  const categoryAncestors = useMemo(() => {
+    if (!primaryCategory) return [];
+    return getCategoryAncestors(primaryCategory, categories);
+  }, [primaryCategory, categories]);
 
   return (
     <div className="bg-[#f8f9fa] min-h-screen pb-20">
@@ -306,11 +317,22 @@ const ProductDetails: React.FC = () => {
             <Link to="/" className="hover:text-[#F0264C] transition-colors flex items-center gap-1">
               <Home size={13} /> Home
             </Link>
-            {primaryCategoryName && (
+            {categoryAncestors.map((cat) => (
+              <React.Fragment key={cat.id}>
+                <ChevronRight size={12} className="text-gray-400" />
+                <Link 
+                  to={getCategoryUrl(cat, categories)} 
+                  className="hover:text-[#F0264C] transition-colors"
+                >
+                  {cat.name.replace(/&amp;/g, '&')}
+                </Link>
+              </React.Fragment>
+            ))}
+            {categoryAncestors.length === 0 && primaryCategoryName && (
               <>
                 <ChevronRight size={12} className="text-gray-400" />
                 <Link 
-                  to={primaryCategory ? `/category/${primaryCategory.slug || encodeURIComponent(primaryCategory.name)}` : `/products?category=${encodeURIComponent(primaryCategoryName)}`} 
+                  to={`/products?category=${encodeURIComponent(primaryCategoryName)}`} 
                   className="hover:text-[#F0264C] transition-colors"
                 >
                   {primaryCategoryName.replace(/&amp;/g, '&')}
@@ -833,7 +855,7 @@ const ProductDetails: React.FC = () => {
                 Related Products
               </h2>
               <Link 
-                to={primaryCategory ? `/category/${primaryCategory.slug || encodeURIComponent(primaryCategory.name)}` : '/products'} 
+                to={primaryCategory ? getCategoryUrl(primaryCategory, categories) : '/products'} 
                 className="text-xs font-bold text-[#F0264C] hover:underline"
               >
                 View All

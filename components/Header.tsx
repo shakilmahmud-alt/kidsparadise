@@ -31,7 +31,7 @@ import { useStore } from '../context/StoreContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Category } from '../types';
 import { filterAndRankProducts } from '../lib/search';
-import { slugify } from '../lib/category';
+import { slugify, getCategoryUrl } from '../lib/category';
 
 interface CategoryNode extends Category {
   children: CategoryNode[];
@@ -66,7 +66,7 @@ const buildCategoryTree = (categories: Category[], parentId: string | null = nul
     }));
 };
 
-const MobileCategoryItem: React.FC<{ category: CategoryNode; level: number; onClose: () => void }> = ({ category, level, onClose }) => {
+const MobileCategoryItem: React.FC<{ category: CategoryNode; level: number; categories: Category[]; onClose: () => void }> = ({ category, level, categories, onClose }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasChildren = category.children && category.children.length > 0;
 
@@ -93,7 +93,7 @@ const MobileCategoryItem: React.FC<{ category: CategoryNode; level: number; onCl
           </div>
         ) : (
           <Link
-            to={`/category/${category.slug || slugify(category.name)}`}
+            to={getCategoryUrl(category, categories)}
             className="flex items-center w-full text-sm"
             onClick={onClose}
           >
@@ -110,6 +110,7 @@ const MobileCategoryItem: React.FC<{ category: CategoryNode; level: number; onCl
             key={child.id}
             category={child}
             level={level + 1}
+            categories={categories}
             onClose={onClose}
           />
         ))}
@@ -538,7 +539,7 @@ export const Header: React.FC = () => {
                           }}
                         >
                           <Link
-                            to={`/category/${cat.slug || slugify(cat.name)}`}
+                            to={getCategoryUrl(cat, categories)}
                             onClick={() => setIsStickyMenuOpen(false)}
                             className={`flex items-center justify-between px-4 py-2.5 text-[13.5px] transition-colors ${
                               isHovered 
@@ -638,7 +639,7 @@ export const Header: React.FC = () => {
                           {activeStickyCategory.name.replace(/&amp;/g, '&')}
                         </h4>
                         <Link
-                          to={`/category/${activeStickyCategory.slug || slugify(activeStickyCategory.name)}`}
+                          to={getCategoryUrl(activeStickyCategory, categories)}
                           onClick={() => setIsStickyMenuOpen(false)}
                           className="text-xs font-bold text-[#F0264C] hover:underline"
                         >
@@ -650,7 +651,7 @@ export const Header: React.FC = () => {
                         {activeStickyCategory.children.map((child: any) => (
                           <Link
                             key={child.id}
-                            to={`/category/${child.slug || slugify(child.name)}`}
+                            to={getCategoryUrl(child, categories)}
                             onClick={() => setIsStickyMenuOpen(false)}
                             className="text-xs text-gray-700 hover:text-[#0072CE] hover:font-bold py-1.5 px-2 rounded-lg hover:bg-blue-50/50 transition-all truncate block"
                           >
@@ -900,6 +901,7 @@ export const Header: React.FC = () => {
                   key={cat.id} 
                   category={cat} 
                   level={0} 
+                  categories={categories}
                   onClose={() => setIsMobileMenuOpen(false)} 
                 />
               ))}

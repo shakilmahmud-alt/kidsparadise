@@ -8,6 +8,7 @@ import { useStore } from '../context/StoreContext';
 import ProductCard from './ProductCard';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { getCategoryUrl } from '../lib/category';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -19,7 +20,7 @@ interface ToyTab {
 }
 
 export const ToysShowcase: React.FC = () => {
-  const { products, frontendProducts, loading, isStoreLoaded } = useStore();
+  const { products, frontendProducts, categories, loading, isStoreLoaded } = useStore();
   const sourceProducts = frontendProducts || products;
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -117,8 +118,8 @@ export const ToysShowcase: React.FC = () => {
   }, [currentTabObj]);
 
   const shopAllLink = useMemo(() => {
-    return `/category/${currentTabObj.slug}`;
-  }, [currentTabObj]);
+    return getCategoryUrl(currentTabObj.slug === 'all' ? 'toys' : currentTabObj.slug, categories);
+  }, [currentTabObj, categories]);
 
   // GSAP animation on tab change or mount
   useEffect(() => {
@@ -145,7 +146,7 @@ export const ToysShowcase: React.FC = () => {
         </div>
 
         <Link
-          to="/category/toys"
+          to={getCategoryUrl('toys', categories)}
           className="text-xs md:text-sm font-bold text-[#F0264C] hover:text-[#d01c3f] flex items-center gap-1.5 transition-all group shrink-0"
         >
           <span>View all</span>

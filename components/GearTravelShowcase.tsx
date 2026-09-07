@@ -9,6 +9,7 @@ import { useStore } from '../context/StoreContext';
 import ProductCard from './ProductCard';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { getCategoryUrl } from '../lib/category';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -20,7 +21,7 @@ interface GearTab {
 }
 
 export const GearTravelShowcase: React.FC = () => {
-  const { products, frontendProducts, loading, isStoreLoaded } = useStore();
+  const { products, frontendProducts, categories, loading, isStoreLoaded } = useStore();
   const sourceProducts = frontendProducts || products;
   const sliderRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -141,8 +142,8 @@ export const GearTravelShowcase: React.FC = () => {
   }, [currentTabObj]);
 
   const shopAllLink = useMemo(() => {
-    return `/category/${currentTabObj.slug}`;
-  }, [currentTabObj]);
+    return getCategoryUrl(currentTabObj.slug === 'all' ? 'gear-travel' : currentTabObj.slug, categories);
+  }, [currentTabObj, categories]);
 
   return (
     <section ref={containerRef} className="w-full max-w-[1680px] mx-auto px-4 md:px-8 mb-12 md:mb-20 font-sans">
@@ -156,7 +157,7 @@ export const GearTravelShowcase: React.FC = () => {
         </div>
 
         <Link
-          to="/category/gear-travel"
+          to={getCategoryUrl('gear-travel', categories)}
           className="text-xs md:text-sm font-bold text-[#F0264C] hover:text-[#d01c3f] flex items-center gap-1.5 transition-all group shrink-0"
         >
           <span>View all</span>
@@ -214,7 +215,7 @@ export const GearTravelShowcase: React.FC = () => {
               Certified car seats, lightweight strollers & carriers engineered for maximum child safety and comfort.
             </p>
             <Link
-              to="/category/gear-travel"
+              to={getCategoryUrl('gear-travel', categories)}
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-gray-900 hover:bg-[#F0264C] hover:text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md group cursor-pointer"
             >
               <span>Explore Gear</span>

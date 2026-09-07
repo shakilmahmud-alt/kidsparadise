@@ -18,7 +18,7 @@ import {
   Plus
 } from 'lucide-react';
 import { Category } from '../types';
-import { findCategoryBySlugOrName, getCategoryFamily, isProductInCategory, slugify } from '../lib/category';
+import { findCategoryByPathOrSlug, findCategoryBySlugOrName, getCategoryFamily, isProductInCategory, slugify, getCategoryAncestors, getCategoryUrl } from '../lib/category';
 
 interface CategoryNode extends Category {
   children: CategoryNode[];
@@ -87,7 +87,9 @@ const ProductCardSkeleton: React.FC = () => {
 };
 
 const CategoryPage: React.FC = () => {
-  const { categorySlug } = useParams<{ categorySlug: string }>();
+  const params = useParams<{ categorySlug?: string; '*'?: string }>();
+  const wildcardPath = params['*'];
+  const categorySlug = params.categorySlug;
   const { products, frontendProducts, categories, reviews, loading, isStoreLoaded } = useStore();
   const sourceProducts = frontendProducts || products;
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -119,12 +121,35 @@ const CategoryPage: React.FC = () => {
       return newParams;
     }, { replace: true });
   };
-  
-  // Find current category
+
+  // Extract raw path from location.pathname (stripping leading "/category/" and trailing slashes)
+  const rawPath = useMemo(() => {
+    if (wildcardPath) return wildcardPath;
+    if (categorySlug) return categorySlug;
+    const match = location.pathname.match(/\/category\/(.+)/i);
+    return match ? match[1] : '';
+  }, [wildcardPath, categorySlug, location.pathname]);
+
+  // Find current category by full hierarchical path or single slug
   const currentCategory = useMemo(() => {
-    if (!categorySlug) return null;
-    return findCategoryBySlugOrName(categories, categorySlug);
-  }, [categorySlug, categories]);
+    if (!rawPath) return null;
+    return findCategoryByPathOrSlug(categories, rawPath);
+  }, [rawPath, categories]);
+
+  // Canonical hierarchical URL synchronization
+  useEffect(() => {
+    if (currentCategory && isStoreLoaded && categories.length > 0) {
+      const canonicalUrl = getCategoryUrl(currentCategory, categories);
+      const normalizedCurrent = location.pathname.endsWith('/') ? location.pathname : `${location.pathname}/`;
+      const normalizedCanonical = canonicalUrl.endsWith('/') ? canonicalUrl : `${canonicalUrl}/`;
+      
+      // If visited via flat URL or old format, smoothly replace URL in address bar to full hierarchical format
+      if (normalizedCurrent !== normalizedCanonical && !normalizedCurrent.includes('/products')) {
+        const search = location.search;
+        navigate(`${canonicalUrl}${search}`, { replace: true });
+      }
+    }
+  }, [currentCategory, categories, isStoreLoaded, location.pathname, location.search, navigate]);
 
   // Set page title for SEO
   useEffect(() => {
@@ -229,19 +254,7 @@ const CategoryPage: React.FC = () => {
   // Get active parent ancestors for breadcrumb trail
   const breadcrumbs = useMemo(() => {
     if (!currentCategory) return [];
-    const trail: Category[] = [currentCategory];
-    let parentId = currentCategory.parentId;
-
-    while (parentId) {
-      const parent = categories.find(c => c.id === parentId);
-      if (parent) {
-        trail.unshift(parent);
-        parentId = parent.parentId;
-      } else {
-        break;
-      }
-    }
-    return trail;
+    return getCategoryAncestors(currentCategory, categories);
   }, [currentCategory, categories]);
 
   // Extract all available attributes (Brands, Color, Size, etc.)
@@ -640,7 +653,7 @@ const CategoryPage: React.FC = () => {
                   return (
                     <Link
                       key={sub.id}
-                      to={`/category/${sub.slug || slugify(sub.name)}`}
+                      to={getCategoryUrl(sub, categories)}
                       onClick={() => isMobile && setIsFilterOpen(false)}
                       className="flex items-center justify-between cursor-pointer select-none group py-1 px-1 rounded hover:bg-gray-50 transition-colors"
                     >
@@ -923,7 +936,7 @@ const CategoryPage: React.FC = () => {
                   {idx === breadcrumbs.length - 1 ? (
                     <span className="text-[#F0264C] font-bold">{crumb.name.replace(/&amp;/g, '&')}</span>
                   ) : (
-                    <Link to={`/category/${crumb.slug || slugify(crumb.name)}`} className="hover:text-[#F0264C] transition-colors">
+                    <Link to={getCategoryUrl(crumb, categories)} className="hover:text-[#F0264C] transition-colors">
                       {crumb.name.replace(/&amp;/g, '&')}
                     </Link>
                   )}

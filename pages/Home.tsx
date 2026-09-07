@@ -12,6 +12,7 @@ import ToysShowcase from '../components/ToysShowcase';
 import GearTravelShowcase from '../components/GearTravelShowcase';
 import { useStore } from '../context/StoreContext';
 import { HomeSection, Product, Brand } from '../types';
+import { getCategoryUrl } from '../lib/category';
 
 const SliderSection: React.FC<{ section: HomeSection; products: Product[] }> = ({ section, products }) => {
   const { categories } = useStore();
@@ -51,7 +52,7 @@ const SliderSection: React.FC<{ section: HomeSection; products: Product[] }> = (
     if (section.filterType === 'category' && section.filterValue) {
       const categoryObj = categories.find(c => c.name === section.filterValue);
       if (categoryObj) {
-        return `/category/${categoryObj.slug || encodeURIComponent(categoryObj.name)}`;
+        return getCategoryUrl(categoryObj, categories);
       }
     }
     return `/products?filter=${section.filterType}${section.filterValue ? `&value=${section.filterValue}` : ''}`;
@@ -168,7 +169,7 @@ const GridSection: React.FC<{ section: HomeSection; products: Product[] }> = ({ 
     if (section.filterType === 'category' && section.filterValue) {
       const categoryObj = categories.find(c => c.name === section.filterValue);
       if (categoryObj) {
-        return `/category/${categoryObj.slug || encodeURIComponent(categoryObj.name)}`;
+        return getCategoryUrl(categoryObj, categories);
       }
     }
     return `/products?filter=${section.filterType}${section.filterValue ? `&value=${section.filterValue}` : ''}`;
@@ -226,6 +227,7 @@ const GridSection: React.FC<{ section: HomeSection; products: Product[] }> = ({ 
 };
 
 const PromoBannersSection = () => {
+  const { categories } = useStore();
   // Drag to scroll logic
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -267,7 +269,7 @@ const PromoBannersSection = () => {
       >
         {/* Banner 1 */}
         <Link
-          to="/category/toys-&-stationery"
+          to={getCategoryUrl('toys', categories)}
           className="parallax-container w-[80vw] md:w-auto aspect-[4/5] md:aspect-[3/4] lg:aspect-auto h-auto md:h-full lg:h-[350px] flex-none snap-center rounded-2xl overflow-hidden shadow-sm group select-none relative block bg-slate-50"
         >
           <img
@@ -280,7 +282,7 @@ const PromoBannersSection = () => {
 
         {/* Banner 2 */}
         <Link
-          to="/category/apparels"
+          to={getCategoryUrl('apparels', categories)}
           className="parallax-container w-[80vw] md:w-auto aspect-[4/5] md:aspect-[3/4] lg:aspect-auto h-auto md:h-full lg:h-[350px] flex-none snap-center rounded-2xl overflow-hidden shadow-sm group select-none relative block bg-slate-50"
         >
           <img
@@ -293,7 +295,7 @@ const PromoBannersSection = () => {
 
         {/* Banner 3 */}
         <Link
-          to="/category/childcare"
+          to={getCategoryUrl('care-hygiene', categories)}
           className="parallax-container w-[80vw] md:w-auto aspect-[4/5] md:aspect-[3/4] lg:aspect-auto h-auto md:h-full lg:h-[350px] flex-none snap-center rounded-2xl overflow-hidden shadow-sm group select-none relative block bg-slate-50"
         >
           <img
@@ -308,24 +310,27 @@ const PromoBannersSection = () => {
   );
 };
 
-const DualBannerSection = () => (
-  <section className="container mx-auto px-4 md:px-8 mb-6 md:mb-16">
-    <div className="grid grid-cols-2 md:grid-cols-2 gap-3 md:gap-6">
-      <Link
-        to="/category/toiletries"
-        className="parallax-container rounded-2xl overflow-hidden shadow-sm group aspect-[2/1] h-auto md:aspect-auto md:h-[280px] block"
-      >
-        <img src="https://ik.imagekit.io/vrtbi4wsn/banners/banner1.4.jpg" loading="lazy" className="parallax-img w-full h-full object-cover scale-110 transition-transform duration-700 group-hover:scale-[1.15]" alt="Special Offer 1" />
-      </Link>
-      <Link
-        to="/category/baby-foods"
-        className="parallax-container rounded-2xl overflow-hidden shadow-sm group aspect-[2/1] h-auto md:aspect-auto md:h-[280px] block"
-      >
-        <img src="https://ik.imagekit.io/vrtbi4wsn/banners/banner1.5.jpg" loading="lazy" className="parallax-img w-full h-full object-cover scale-110 transition-transform duration-700 group-hover:scale-[1.15]" alt="Special Offer 2" />
-      </Link>
-    </div>
-  </section>
-);
+const DualBannerSection = () => {
+  const { categories } = useStore();
+  return (
+    <section className="container mx-auto px-4 md:px-8 mb-6 md:mb-16">
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-3 md:gap-6">
+        <Link
+          to={getCategoryUrl('toiletries', categories)}
+          className="parallax-container rounded-2xl overflow-hidden shadow-sm group aspect-[2/1] h-auto md:aspect-auto md:h-[280px] block"
+        >
+          <img src="https://ik.imagekit.io/vrtbi4wsn/banners/banner1.4.jpg" loading="lazy" className="parallax-img w-full h-full object-cover scale-110 transition-transform duration-700 group-hover:scale-[1.15]" alt="Special Offer 1" />
+        </Link>
+        <Link
+          to={getCategoryUrl('baby-foods', categories)}
+          className="parallax-container rounded-2xl overflow-hidden shadow-sm group aspect-[2/1] h-auto md:aspect-auto md:h-[280px] block"
+        >
+          <img src="https://ik.imagekit.io/vrtbi4wsn/banners/banner1.5.jpg" loading="lazy" className="parallax-img w-full h-full object-cover scale-110 transition-transform duration-700 group-hover:scale-[1.15]" alt="Special Offer 2" />
+        </Link>
+      </div>
+    </section>
+  );
+};
 
 const FullWidthBannerSection: React.FC<{ section: HomeSection }> = ({ section }) => {
   const banner = section.banners?.[0];

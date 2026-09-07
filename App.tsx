@@ -77,6 +77,11 @@ const AppContent: React.FC = () => {
                 <Products />
               </Suspense>
             } />
+            <Route path="/product/*" element={
+              <Suspense fallback={<PageSkeleton type="product-details" />}>
+                <ProductDetails />
+              </Suspense>
+            } />
             <Route path="/product/:slug" element={
               <Suspense fallback={<PageSkeleton type="product-details" />}>
                 <ProductDetails />
@@ -92,6 +97,11 @@ const AppContent: React.FC = () => {
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+            <Route path="/category/*" element={
+              <Suspense fallback={<PageSkeleton type="category" />}>
+                <CategoryPage />
+              </Suspense>
+            } />
             <Route path="/category/:categorySlug" element={
               <Suspense fallback={<PageSkeleton type="category" />}>
                 <CategoryPage />

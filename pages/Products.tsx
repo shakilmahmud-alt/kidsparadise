@@ -7,7 +7,7 @@ import PageSkeleton from '../components/PageSkeleton';
 import { Filter, SlidersHorizontal, ChevronRight, ChevronDown, Search, RotateCcw, Check, Star, Coins, X } from 'lucide-react';
 import { Category } from '../types';
 import { scoreProductSearch } from '../lib/search';
-import { findCategoryBySlugOrName, getCategoryFamily, isProductInCategory, cleanCategoryString, slugify } from '../lib/category';
+import { findCategoryBySlugOrName, getCategoryFamily, isProductInCategory, cleanCategoryString, slugify, getCategoryUrl } from '../lib/category';
 import gsap from 'gsap';
 import { Flip } from 'gsap/Flip';
 
@@ -490,7 +490,7 @@ const Products: React.FC = () => {
                       onSelect={(catName) => {
                          const clickedCat = categories.find(c => c.name === catName);
                          if (clickedCat) {
-                           navigate(`/category/${clickedCat.slug || slugify(clickedCat.name)}`);
+                           navigate(getCategoryUrl(clickedCat, categories));
                          }
                       }}
                       selectedCategoryFamily={selectedCategoryFamily}
@@ -801,7 +801,7 @@ const Products: React.FC = () => {
                      onSelect={(catName) => {
                         const clickedCat = categories.find(c => c.name === catName);
                         if (clickedCat) {
-                          navigate(`/category/${clickedCat.slug || slugify(clickedCat.name)}`);
+                          navigate(getCategoryUrl(clickedCat, categories));
                         }
                      }}
                     selectedCategoryFamily={selectedCategoryFamily}

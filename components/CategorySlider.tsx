@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { getCategoryUrl } from '../lib/category';
 
 interface CategoryBanner {
   id: string;
@@ -151,7 +152,7 @@ export const CategorySlider: React.FC = () => {
             {parentCategories.map((cat) => (
               <Link
                 key={cat.id}
-                to={`/category/${cat.slug}`}
+                to={getCategoryUrl(cat, categories)}
                 style={{ width: `${cardWidth}px` }}
                 className={`h-[285px] flex-shrink-0 rounded-[18px] overflow-hidden ${cat.bgColor} shadow-sm group select-none relative flex flex-col justify-between p-4 cursor-pointer hover:shadow-md transition-all active:scale-98`}
               >

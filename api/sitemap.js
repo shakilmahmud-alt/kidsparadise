@@ -38,7 +38,7 @@ export default async function sitemapHandler(req, res) {
       { data: pages }
     ] = await Promise.all([
       supabase.from('products').select('slug, created_at'),
-      supabase.from('categories').select('slug'),
+      supabase.from('categories').select('id, name, slug, parent_id'),
       supabase.from('blog_posts').select('slug, created_at'),
       supabase.from('pages').select('slug, created_at')
     ]);
@@ -56,10 +56,25 @@ export default async function sitemapHandler(req, res) {
     }
 
     if (categories) {
+      const catMap = new Map();
+      categories.forEach(c => catMap.set(String(c.id), c));
+
+      const getCategoryPath = (cat) => {
+        const parts = [cat.slug || cat.name];
+        let curr = cat;
+        let guard = 0;
+        while (curr.parent_id && catMap.has(String(curr.parent_id)) && guard++ < 10) {
+          curr = catMap.get(String(curr.parent_id));
+          parts.unshift(curr.slug || curr.name);
+        }
+        return parts.join('/');
+      };
+
       categories.forEach(c => {
-        if (c.slug) {
+        if (c.slug || c.name) {
+          const path = getCategoryPath(c);
           urls.push({
-            loc: `${baseUrl}/category/${c.slug}`,
+            loc: `${baseUrl}/category/${path}/`,
             priority: '0.7'
           });
         }

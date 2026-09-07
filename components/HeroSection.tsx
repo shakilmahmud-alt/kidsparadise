@@ -24,7 +24,7 @@ import {
 import { useStore } from '../context/StoreContext';
 import { Category } from '../types';
 import { filterAndRankProducts } from '../lib/search';
-import { slugify } from '../lib/category';
+import { slugify, getCategoryUrl } from '../lib/category';
 
 interface CategoryNode extends Category {
   children: CategoryNode[];
@@ -401,7 +401,7 @@ export const HeroSection: React.FC = () => {
                     }}
                   >
                     <Link
-                      to={`/category/${cat.slug || slugify(cat.name)}`}
+                      to={getCategoryUrl(cat, categories)}
                       className={`flex items-center justify-between px-4 py-2.5 text-[13.5px] transition-colors ${
                         isHovered 
                           ? 'text-[#0072CE] font-bold bg-blue-50/60' 
@@ -510,7 +510,7 @@ export const HeroSection: React.FC = () => {
                   </div>
 
                   <Link 
-                    to={`/category/${activeCategory.slug || slugify(activeCategory.name)}`}
+                    to={getCategoryUrl(activeCategory, categories)}
                     className="px-5 py-2 rounded-lg bg-rose-50 hover:bg-[#F0264C] text-[#F0264C] hover:text-white font-bold text-xs transition-all flex items-center gap-2 shadow-sm"
                     onClick={() => setActiveCategory(null)}
                   >
@@ -528,7 +528,7 @@ export const HeroSection: React.FC = () => {
                     {activeCategory.children.map(subCat => (
                       <div key={subCat.id} className="space-y-2.5">
                         <Link
-                          to={`/category/${subCat.slug || slugify(subCat.name)}`}
+                          to={getCategoryUrl(subCat, categories)}
                           className="font-bold text-[14.5px] text-[#1d293f] hover:text-[#0072CE] transition-colors flex items-center justify-between border-b border-gray-100 pb-1.5 group/sub"
                           onClick={() => setActiveCategory(null)}
                         >
@@ -545,7 +545,7 @@ export const HeroSection: React.FC = () => {
                             {subCat.children.map(subSubCat => (
                               <li key={subSubCat.id}>
                                 <Link
-                                  to={`/category/${subSubCat.slug || slugify(subSubCat.name)}`}
+                                  to={getCategoryUrl(subSubCat, categories)}
                                   className="text-xs text-gray-600 hover:text-[#0072CE] transition-colors flex items-center gap-2 hover:translate-x-1 duration-150 py-0.5"
                                   onClick={() => setActiveCategory(null)}
                                 >
